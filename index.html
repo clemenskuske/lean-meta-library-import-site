@@ -14,7 +14,7 @@
           <h1 id="page-title">Paper import</h1>
         </div>
         <p class="guardrail">
-          Use a GitHub token, point at a paper repo, validate its metadata file,
+          Authenticate, point at a paper repo, validate its metadata file,
           and dispatch a pinned import.
         </p>
       </section>
@@ -33,21 +33,19 @@
             <div>
               <span class="step-count">1</span>
               <h2>Authenticate first</h2>
-              <p>Paste a GitHub token with access to the paper repo and permission to dispatch the import workflow.</p>
+              <p>GitHub authentication lets the page find private repos and dispatch the import workflow as you.</p>
             </div>
-            <div class="input-row">
-              <label>
-                <span>GitHub token</span>
-                <input
-                  id="token-input"
-                  type="password"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="ghp_..., github_pat_..., or fine-grained token">
-              </label>
-              <button id="auth-button" type="button" class="secondary-action">Use token</button>
+            <button id="auth-button" type="button" class="secondary-action">Authenticate</button>
+          </div>
+
+          <div id="device-panel" class="device-panel" hidden>
+            <div>
+              <span class="label-kicker">GitHub device code</span>
+              <strong id="device-code">--------</strong>
             </div>
-            <p class="summary-line">The token is kept only in this page while it is open.</p>
+            <a id="device-link" class="secondary-action" href="https://github.com/login/device" target="_blank" rel="noreferrer">
+              Open GitHub
+            </a>
           </div>
 
           <div id="repo-step" class="step-panel">
@@ -127,7 +125,7 @@
           <span class="label-kicker">Latest response</span>
           <div id="result-title" class="result-title">Ready</div>
           <p id="result-copy">
-            Start by entering a GitHub token. The import details will appear
+            Start with GitHub authentication. The import details will appear
             one step at a time after authentication succeeds.
           </p>
           <a id="run-link" class="run-link" href="#" hidden>Open workflow</a>

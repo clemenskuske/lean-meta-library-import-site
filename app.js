@@ -43,7 +43,6 @@ const authState = document.querySelector("#auth-state");
 const targetRepo = document.querySelector("#target-repo");
 const authStep = document.querySelector("#auth-step");
 const repoStep = document.querySelector("#repo-step");
-const tokenInput = document.querySelector("#token-input");
 const repoUrlInput = document.querySelector("#repo-url");
 const repoLookupButton = document.querySelector("#repo-lookup-button");
 const repoSummary = document.querySelector("#repo-summary");
@@ -57,6 +56,9 @@ const metadataPathInput = document.querySelector("#metadata-path");
 const metadataCheckButton = document.querySelector("#metadata-check-button");
 const yamlChoices = document.querySelector("#yaml-choices");
 const metadataSummary = document.querySelector("#metadata-summary");
+const devicePanel = document.querySelector("#device-panel");
+const deviceCode = document.querySelector("#device-code");
+const deviceLink = document.querySelector("#device-link");
 const resultTitle = document.querySelector("#result-title");
 const resultCopy = document.querySelector("#result-copy");
 const runLink = document.querySelector("#run-link");
@@ -182,19 +184,85 @@ async function githubJson(url, options = {}) {
   return body;
 }
 
+function oauthEndpoint(path) {
+  const proxy = (config.oauthProxyBaseUrl || "").trim().replace(/\/+$/, "");
+  if (!proxy) {
+    throw new Error("Set oauthProxyBaseUrl in config.js. GitHub's OAuth device endpoints do not allow direct browser fetches from a static page.");
+  }
+  return `${proxy}${path}`;
+}
+
+function oauthFetchMessage(error) {
+  if (error instanceof TypeError) {
+    return "The OAuth request could not be completed. Check oauthProxyBaseUrl and its CORS settings.";
+  }
+  return error.message || String(error);
+}
+
+async function oauthJson(path, params) {
+  return githubJson(oauthEndpoint(path), {
+    method: "POST",
+    body: params
+  });
+}
+
+async function beginDeviceFlow() {
+  if (!config.githubClientId || config.githubClientId === "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID") {
+    throw new Error("Set githubClientId in config.js before using OAuth.");
+  }
+
+  const params = new URLSearchParams({
+    client_id: config.githubClientId,
+    scope: config.oauthScopes || "repo"
+  });
+
+  return oauthJson("/login/device/code", params);
+}
+
+async function pollForToken(device) {
+  const started = Date.now();
+  let interval = Number(device.interval || 5);
+
+  while (Date.now() - started < Number(device.expires_in || 900) * 1000) {
+    await new Promise((resolve) => window.setTimeout(resolve, interval * 1000));
+
+    const params = new URLSearchParams({
+      client_id: config.githubClientId,
+      device_code: device.device_code,
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code"
+    });
+
+    const body = await oauthJson("/login/oauth/access_token", params);
+
+    if (body.access_token) return body.access_token;
+    if (body.error === "authorization_pending") continue;
+    if (body.error === "slow_down") {
+      interval += 5;
+      continue;
+    }
+    if (body.error === "expired_token") throw new Error("The GitHub device code expired.");
+    if (body.error === "access_denied") throw new Error("GitHub authorization was denied.");
+    throw new Error(body.error_description || body.error || "GitHub device authorization failed.");
+  }
+
+  throw new Error("The GitHub device code expired.");
+}
+
 async function authenticate() {
   if (state.polling) return;
   state.polling = true;
   authButton.disabled = true;
   dispatchButton.disabled = true;
-  markField(tokenInput, true);
-  setMessage("Checking the GitHub token...");
+  setMessage("Requesting a GitHub device code...");
 
   try {
-    const token = tokenInput.value.trim();
-    if (!token) throw new Error("Paste a GitHub token before continuing.");
+    const device = await beginDeviceFlow();
+    deviceCode.textContent = device.user_code;
+    deviceLink.href = device.verification_uri || "https://github.com/login/device";
+    devicePanel.hidden = false;
+    setMessage("Enter the code on GitHub. This page will continue when authorization completes.");
 
-    state.accessToken = token;
+    state.accessToken = await pollForToken(device);
     const user = await githubJson("https://api.github.com/user", {
       headers: authHeaders()
     });
@@ -202,15 +270,14 @@ async function authenticate() {
     state.authenticatedUser = user.login || "";
     authState.textContent = state.authenticatedUser ? `Authenticated: ${state.authenticatedUser}` : "Authenticated";
     authState.classList.add("is-good");
-    tokenInput.value = "";
+    devicePanel.hidden = true;
     setStep(authStep, false);
     setStep(repoStep, true);
     repoUrlInput.focus();
     setMessage("GitHub authentication complete. Paste the paper repository URL to continue.", "is-good");
   } catch (error) {
     state.accessToken = "";
-    markField(tokenInput, false);
-    setMessage(error.message || String(error), "is-error");
+    setMessage(oauthFetchMessage(error), "is-error");
   } finally {
     state.polling = false;
     authButton.disabled = false;
@@ -641,13 +708,6 @@ function initialize() {
   setStep(metadataStep, false);
   form.addEventListener("submit", dispatchWorkflow);
   authButton.addEventListener("click", authenticate);
-  tokenInput.addEventListener("input", () => markField(tokenInput, true));
-  tokenInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      void authenticate();
-    }
-  });
   repoLookupButton.addEventListener("click", resolveRepository);
   repoUrlInput.addEventListener("input", resetAfterRepositoryChange);
   repoUrlInput.addEventListener("keydown", (event) => {
