@@ -115,8 +115,8 @@ like `MetaLibrary.<PaperName>.<localName>`.
 
 The metadata file is normally `metadata-meta-library.yaml`. Required fields
 include `paper_id`, `paper_title`, `surface_file`, `source_repo_url`,
-`source_branch`, `source_commit`, `online_source`, and `exported_items`. ORCID is
-recommended when available.
+`source_branch`, `online_source`, and `exported_items`. ORCID is recommended
+when available.
 
 Versions use `v<generation><approach><update>`, for example `v1a1`. `v1a2`
 updates approach `a`; `v1b1` is a different approach to the same paper

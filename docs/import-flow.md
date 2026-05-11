@@ -41,7 +41,6 @@ Required information:
 - paper identifier
 - source repo URL
 - branch
-- commit hash
 - arXiv, DOI, or other online source
 - ORCID if available
 - exported definitions and theorems

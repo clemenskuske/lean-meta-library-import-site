@@ -85,7 +85,6 @@ text, call it the surface file or export surface.
 - `surface_file`
 - `source_repo_url`
 - `source_branch`
-- `source_commit`
 - `online_source`, such as an arXiv URL or DOI URL
 - `orcid`, if available
 - `exported_items`

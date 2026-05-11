@@ -7,13 +7,11 @@ const requiredMetadataFields = [
   "surface_file",
   "source_repo_url",
   "source_branch",
-  "source_commit",
   "online_source",
   "exported_items"
 ];
 
 const patterns = {
-  commit: /^[0-9a-fA-F]{40}$/,
   path: /^[A-Za-z0-9._/-]+$/
 };
 
@@ -79,7 +77,6 @@ function assertFile(root, relativePath, label) {
 const repoRoot = path.resolve("submitted-paper");
 const metadataPath = process.env.METADATA_PATH || "";
 const sourceBranch = process.env.SOURCE_BRANCH || "";
-const sourceCommit = (process.env.SOURCE_COMMIT || "").toLowerCase();
 
 assertFile(repoRoot, metadataPath, "Metadata file");
 const metadataText = fs.readFileSync(path.join(repoRoot, metadataPath), "utf8");
@@ -92,13 +89,6 @@ for (const field of requiredMetadataFields) {
 
 if (!metadataHasField(metadataText, "orcid")) {
   warnings.push("ORCID is missing. That is allowed when unavailable.");
-}
-
-const metadataCommit = metadataValue(metadataText, "source_commit");
-if (metadataCommit && !patterns.commit.test(metadataCommit)) {
-  errors.push("source_commit must be a full 40-character Git commit hash.");
-} else if (metadataCommit && metadataCommit.toLowerCase() !== sourceCommit) {
-  errors.push("source_commit in metadata does not match the submitted commit.");
 }
 
 const metadataBranch = metadataValue(metadataText, "source_branch");

@@ -5,7 +5,6 @@ surface_file: Surface.lean
 root_import_file: TemplatePaper.lean
 source_repo_url: https://github.com/example/formalized-paper
 source_branch: main
-source_commit: 0000000000000000000000000000000000000000
 online_source: https://arxiv.org/abs/0000.00000
 arxiv: ""
 doi: ""
