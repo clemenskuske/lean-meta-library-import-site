@@ -1,8 +1,6 @@
 name: Import paper submission
 description: Submit a pinned Lean paper repository for meta-library import.
 title: "Import paper: "
-labels:
-  - import-submission
 body:
   - type: markdown
     attributes:
@@ -36,7 +34,7 @@ body:
     attributes:
       label: Pinned commit hash
       description: Full 40-character Git commit hash. Do not submit a branch name or short SHA.
-      placeholder: 0000000000000000000000000000000000000000
+      placeholder: "0000000000000000000000000000000000000000"
     validations:
       required: true
 
