@@ -1,0 +1,89 @@
+name: Import paper submission
+description: Submit a pinned Lean paper repository for meta-library import.
+title: "Import paper: "
+labels:
+  - import-submission
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Submit an exact GitHub commit that already builds as a Lean/Lake package.
+
+        The workflow will check your GitHub username against the import allowlist,
+        validate these fields, inspect the metadata and surface file, then run the
+        submission checker against the pinned commit.
+
+  - type: input
+    id: repo_url
+    attributes:
+      label: GitHub repository URL
+      description: The paper repository to import. Full GitHub URLs and owner/repo are accepted.
+      placeholder: https://github.com/owner/paper-repo
+    validations:
+      required: true
+
+  - type: input
+    id: branch
+    attributes:
+      label: Branch
+      description: The branch where this commit came from. This is recorded and checked against metadata.
+      value: main
+    validations:
+      required: true
+
+  - type: input
+    id: commit_hash
+    attributes:
+      label: Pinned commit hash
+      description: Full 40-character Git commit hash. Do not submit a branch name or short SHA.
+      placeholder: 0000000000000000000000000000000000000000
+    validations:
+      required: true
+
+  - type: input
+    id: metadata_path
+    attributes:
+      label: Metadata path
+      description: Relative path to metadata-meta-library.yaml in the paper repo.
+      value: metadata-meta-library.yaml
+    validations:
+      required: true
+
+  - type: input
+    id: surface_path
+    attributes:
+      label: Surface file path
+      description: Relative path to the surface file. This must match metadata surface_file.
+      value: Surface.lean
+    validations:
+      required: true
+
+  - type: input
+    id: usage_feedback_path
+    attributes:
+      label: Usage feedback path
+      description: Optional relative path to used-formalizations.json.
+      placeholder: used-formalizations.json
+    validations:
+      required: false
+
+  - type: input
+    id: usage_lessons_path
+    attributes:
+      label: Usage lessons path
+      description: Optional relative path to used-formalization-lessons.md.
+      placeholder: used-formalization-lessons.md
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmation
+      options:
+        - label: I am submitting this exact pinned commit, not latest main.
+          required: true
+        - label: The repository contains a reproducible Lean/Lake package with committed lake-manifest.json.
+          required: true
+        - label: The surface file is an alias-only import boundary with no sorry, admit, unapproved axiom, or unapproved constant.
+          required: true

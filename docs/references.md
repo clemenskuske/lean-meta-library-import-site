@@ -36,14 +36,15 @@ rules.
   GitHub Pages is static hosting for HTML, CSS, and JavaScript from a GitHub
   repository.
 
-- GitHub OAuth device flow:
-  https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
-  The import site uses device flow so the static page can authenticate without
-  embedding a client secret.
+- GitHub issue forms:
+  https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/configuring-issue-templates-for-your-repository
+  The import site uses a structured issue form so GitHub handles sign-in and
+  issue creation.
 
-- GitHub workflow dispatch REST endpoint:
-  https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
-  The import page calls this endpoint with the user's in-memory token.
+- GitHub Actions issues event:
+  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#issues
+  The import workflow runs when an import-submission issue is opened, edited, or
+  reopened.
 
 - GitHub Actions `github.actor` context:
   https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#github-context

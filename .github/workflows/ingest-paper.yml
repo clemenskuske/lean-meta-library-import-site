@@ -1,6 +1,8 @@
 name: Ingest Submitted Paper
 
 on:
+  issues:
+    types: [opened, edited, reopened]
   workflow_dispatch:
     inputs:
       source_repository:
@@ -31,19 +33,61 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   META_LIBRARY_REPOSITORY: clemenskuske/lean-meta-library
   META_LIBRARY_REF: main
 
 jobs:
-  authorize:
+  prepare:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && (contains(github.event.issue.labels.*.name, 'import-submission') || startsWith(github.event.issue.title, 'Import paper:')))
     runs-on: ubuntu-latest
+    outputs:
+      source_repository: ${{ steps.submission.outputs.source_repository }}
+      source_branch: ${{ steps.submission.outputs.source_branch }}
+      source_commit: ${{ steps.submission.outputs.source_commit }}
+      metadata_path: ${{ steps.submission.outputs.metadata_path }}
+      surface_path: ${{ steps.submission.outputs.surface_path }}
+      usage_feedback_path: ${{ steps.submission.outputs.usage_feedback_path }}
+      usage_lessons_path: ${{ steps.submission.outputs.usage_lessons_path }}
     steps:
       - name: Checkout import controller
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Parse and validate submission fields
+        id: submission
+        run: node .github/scripts/prepare-submission.mjs
+
+      - name: Comment on invalid issue submission
+        if: failure() && github.event_name == 'issues' && steps.submission.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const details = fs.existsSync(".submission-error")
+              ? fs.readFileSync(".submission-error", "utf8").trim()
+              : "The submission form could not be parsed.";
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import submission was not accepted.",
+                "",
+                `Reason: ${details}`,
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });
+
       - name: Check GitHub username allowlist
+        id: allowlist
         shell: bash
         env:
           ACTOR: ${{ github.actor }}
@@ -55,52 +99,81 @@ jobs:
             exit 1
           fi
 
+      - name: Comment on unauthorized issue submission
+        if: failure() && github.event_name == 'issues' && steps.allowlist.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import submission was not accepted.",
+                "",
+                `Reason: \`${context.actor}\` is not on the import allowlist.`,
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });
+
       - name: Confirm target repository token
+        id: target_token
         shell: bash
         env:
           META_LIBRARY_PUSH_TOKEN: ${{ secrets.META_LIBRARY_PUSH_TOKEN }}
         run: |
           if [ -z "$META_LIBRARY_PUSH_TOKEN" ]; then
-            echo "Missing META_LIBRARY_PUSH_TOKEN. Add a fine-grained token that can read and write ${META_LIBRARY_REPOSITORY}."
+            echo "Missing META_LIBRARY_PUSH_TOKEN. Add a fine-grained token that can read/write contents and pull requests in ${META_LIBRARY_REPOSITORY}."
             exit 1
           fi
 
-      - name: Validate dispatch inputs
-        shell: bash
-        env:
-          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
-          SOURCE_BRANCH: ${{ inputs.source_branch }}
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-          METADATA_PATH: ${{ inputs.metadata_path }}
-          SURFACE_PATH: ${{ inputs.surface_path }}
-          USAGE_FEEDBACK_PATH: ${{ inputs.usage_feedback_path }}
-          USAGE_LESSONS_PATH: ${{ inputs.usage_lessons_path }}
-        run: |
-          valid_path() {
-            local value="$1"
-            [[ "$value" =~ ^[A-Za-z0-9._/-]+$ ]] || return 1
-            [[ "$value" != /* ]] || return 1
-            [[ "$value" != */ ]] || return 1
-            [[ "$value" != *"//"* ]] || return 1
-            [[ "$value" != "." ]] || return 1
-            [[ "$value" != ".." ]] || return 1
-            [[ "$value" != ../* ]] || return 1
-            [[ "$value" != */.. ]] || return 1
-            [[ "$value" != */../* ]] || return 1
-          }
+      - name: Comment on import-site configuration failure
+        if: failure() && github.event_name == 'issues' && steps.target_token.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import submission could not be validated because the import-site repository is missing required configuration.",
+                "",
+                "Reason: `META_LIBRARY_PUSH_TOKEN` is not configured.",
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });
 
-          [[ "$SOURCE_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "Invalid source_repository"; exit 1; }
-          [[ "$SOURCE_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "Invalid source_branch"; exit 1; }
-          [[ "$SOURCE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "Invalid source_commit"; exit 1; }
-          valid_path "$METADATA_PATH" || { echo "Invalid metadata_path"; exit 1; }
-          valid_path "$SURFACE_PATH" || { echo "Invalid surface_path"; exit 1; }
-          [[ -z "$USAGE_FEEDBACK_PATH" ]] || valid_path "$USAGE_FEEDBACK_PATH" || { echo "Invalid usage_feedback_path"; exit 1; }
-          [[ -z "$USAGE_LESSONS_PATH" ]] || valid_path "$USAGE_LESSONS_PATH" || { echo "Invalid usage_lessons_path"; exit 1; }
+      - name: Comment on accepted issue submission
+        if: success() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import submission accepted for validation.",
+                "",
+                `Repository: \`${{ steps.submission.outputs.source_repository }}\``,
+                `Commit: \`${{ steps.submission.outputs.source_commit }}\``,
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });
 
   validate:
-    needs: authorize
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout import controller
+        uses: actions/checkout@v4
+        with:
+          path: import-controller
+
       - name: Checkout meta-library
         uses: actions/checkout@v4
         with:
@@ -112,17 +185,22 @@ jobs:
       - name: Checkout submitted paper at pinned commit
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.source_repository }}
-          ref: ${{ inputs.source_commit }}
+          repository: ${{ needs.prepare.outputs.source_repository }}
+          ref: ${{ needs.prepare.outputs.source_commit }}
           path: submitted-paper
           persist-credentials: false
           token: ${{ secrets.SUBMISSION_READ_TOKEN || secrets.META_LIBRARY_PUSH_TOKEN || github.token }}
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Confirm pinned checkout
         shell: bash
         env:
-          SOURCE_BRANCH: ${{ inputs.source_branch }}
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
         run: |
           echo "Submitted branch: $SOURCE_BRANCH"
           echo "Submitted commit: $SOURCE_COMMIT"
@@ -132,16 +210,26 @@ jobs:
             exit 1
           fi
 
+      - name: Validate metadata and surface declaration
+        env:
+          SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
+          METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
+          SURFACE_PATH: ${{ needs.prepare.outputs.surface_path }}
+          USAGE_FEEDBACK_PATH: ${{ needs.prepare.outputs.usage_feedback_path }}
+          USAGE_LESSONS_PATH: ${{ needs.prepare.outputs.usage_lessons_path }}
+        run: node import-controller/.github/scripts/validate-submission-metadata.mjs
+
       - name: Build checker container
         run: docker build -f meta-library/containers/submission-checker/Dockerfile -t meta-library-submission-checker meta-library
 
       - name: Validate submitted paper
         shell: bash
         env:
-          METADATA_PATH: ${{ inputs.metadata_path }}
-          SURFACE_PATH: ${{ inputs.surface_path }}
-          USAGE_FEEDBACK_PATH: ${{ inputs.usage_feedback_path }}
-          USAGE_LESSONS_PATH: ${{ inputs.usage_lessons_path }}
+          METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
+          SURFACE_PATH: ${{ needs.prepare.outputs.surface_path }}
+          USAGE_FEEDBACK_PATH: ${{ needs.prepare.outputs.usage_feedback_path }}
+          USAGE_LESSONS_PATH: ${{ needs.prepare.outputs.usage_lessons_path }}
         run: |
           EXTRA_ARGS=()
           if [ -n "$USAGE_FEEDBACK_PATH" ]; then
@@ -159,14 +247,151 @@ jobs:
             "${EXTRA_ARGS[@]}" \
             --json
 
+      - name: Import submitted paper into meta-library
+        id: import
+        working-directory: meta-library
+        shell: bash
+        env:
+          METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
+          SURFACE_PATH: ${{ needs.prepare.outputs.surface_path }}
+          SOURCE_REPOSITORY: ${{ needs.prepare.outputs.source_repository }}
+          SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
+          USAGE_FEEDBACK_PATH: ${{ needs.prepare.outputs.usage_feedback_path }}
+          USAGE_LESSONS_PATH: ${{ needs.prepare.outputs.usage_lessons_path }}
+          IMPORT_USER_ID: ${{ github.actor }}
+        run: |
+          EXTRA_ARGS=()
+          if [ -n "$USAGE_FEEDBACK_PATH" ]; then
+            EXTRA_ARGS+=(--usage-feedback "$USAGE_FEEDBACK_PATH")
+          fi
+          if [ -n "$USAGE_LESSONS_PATH" ]; then
+            EXTRA_ARGS+=(--usage-lessons "$USAGE_LESSONS_PATH")
+          fi
+          npm run import:paper -- \
+            --repo "$GITHUB_WORKSPACE/submitted-paper" \
+            --metadata "$METADATA_PATH" \
+            --surface "$SURFACE_PATH" \
+            --source-repository "$SOURCE_REPOSITORY" \
+            --source-branch "$SOURCE_BRANCH" \
+            --source-commit "$SOURCE_COMMIT" \
+            --import-user-id "$IMPORT_USER_ID" \
+            --github-output "$GITHUB_OUTPUT" \
+            "${EXTRA_ARGS[@]}"
+
       - name: Install Lean
         uses: leanprover/lean-action@v1
         with:
           auto-config: false
 
+      - name: Update Lake manifest
+        working-directory: meta-library
+        run: lake update
+
       - name: Build meta-library
         working-directory: meta-library
         run: lake build
 
-      - name: Next step
-        run: echo "Submission validation passed and the meta-library builds. Import commit creation will use META_LIBRARY_PUSH_TOKEN once the importer is implemented."
+      - name: Commit and push import branch
+        working-directory: meta-library
+        shell: bash
+        env:
+          IMPORT_BRANCH: ${{ steps.import.outputs.import_branch }}
+          PAPER_ID: ${{ steps.import.outputs.paper_id }}
+          VERSION: ${{ steps.import.outputs.version }}
+        run: |
+          git switch -C "$IMPORT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add MetaLibrary papers.csv lakefile.lean lake-manifest.json
+          if git diff --cached --quiet; then
+            echo "Importer produced no commit-ready changes."
+            exit 1
+          fi
+          git commit -m "Import ${PAPER_ID} ${VERSION}"
+          git push --force-with-lease origin "HEAD:${IMPORT_BRANCH}"
+
+      - name: Open or update import pull request
+        id: pr
+        working-directory: meta-library
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.META_LIBRARY_PUSH_TOKEN }}
+          IMPORT_BRANCH: ${{ steps.import.outputs.import_branch }}
+          PAPER_ID: ${{ steps.import.outputs.paper_id }}
+          PAPER_TITLE: ${{ steps.import.outputs.paper_title }}
+          VERSION: ${{ steps.import.outputs.version }}
+          SURFACE_MODULE: ${{ steps.import.outputs.surface_module }}
+          SOURCE_REPO_URL: ${{ steps.import.outputs.source_repo_url }}
+          SOURCE_BRANCH: ${{ steps.import.outputs.source_branch }}
+          SOURCE_COMMIT: ${{ steps.import.outputs.source_commit }}
+        run: |
+          cat > import-pr-body.md <<EOF
+          Automated paper import from the import-site workflow.
+
+          - Paper: ${PAPER_TITLE} (${PAPER_ID})
+          - Version: ${VERSION}
+          - Surface module: \`${SURFACE_MODULE}\`
+          - Source repo: ${SOURCE_REPO_URL}
+          - Source branch: ${SOURCE_BRANCH}
+          - Source commit: \`${SOURCE_COMMIT}\`
+
+          Validation completed before import:
+          - submitted repo checked out at the pinned commit
+          - metadata and surface preflight passed
+          - checker container passed
+          - Lake manifest updated
+          - full meta-library build passed
+          EOF
+
+          existing_pr="$(gh pr list --repo "$META_LIBRARY_REPOSITORY" --head "$IMPORT_BRANCH" --state open --json number --jq '.[0].number')"
+          if [ -n "$existing_pr" ]; then
+            gh pr edit "$existing_pr" --repo "$META_LIBRARY_REPOSITORY" --title "Import ${PAPER_ID} ${VERSION}" --body-file import-pr-body.md
+            pr_url="$(gh pr view "$existing_pr" --repo "$META_LIBRARY_REPOSITORY" --json url --jq '.url')"
+          else
+            pr_url="$(gh pr create \
+              --repo "$META_LIBRARY_REPOSITORY" \
+              --base "$META_LIBRARY_REF" \
+              --head "$IMPORT_BRANCH" \
+              --title "Import ${PAPER_ID} ${VERSION}" \
+              --body-file import-pr-body.md)"
+          fi
+          echo "pr_url=${pr_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on passed issue submission
+        if: success() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import validation passed.",
+                "",
+                "The submitted repository checked out at the pinned commit, the checker ran, the import branch was pushed, and the meta-library PR was opened or updated.",
+                "",
+                `Pull request: ${{ steps.pr.outputs.pr_url }}`,
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });
+
+      - name: Comment on failed issue validation
+        if: failure() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import validation failed.",
+                "",
+                "Check the workflow logs for the exact failing validation step.",
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });

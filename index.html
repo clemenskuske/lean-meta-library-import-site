@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Meta-library Paper Import</title>
-    <link rel="stylesheet" href="./styles.css?v=oauth-device-flow">
+    <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
     <main class="shell">
@@ -14,126 +14,63 @@
           <h1 id="page-title">Paper import</h1>
         </div>
         <p class="guardrail">
-          Authenticate, point at a paper repo, validate its metadata file,
-          and dispatch a pinned import.
+          Submit a pinned Lean paper repository through GitHub's authenticated
+          issue form. The import workflow validates the commit and reports back
+          on the issue.
         </p>
       </section>
 
-      <section class="workspace" aria-label="Import workflow dispatcher">
-        <form id="import-form" novalidate>
+      <section class="workspace" aria-label="Import submission">
+        <div class="form-card">
           <div class="target-bar">
             <div>
-              <span class="label-kicker">Target workflow</span>
-              <strong id="target-repo">Configure config.js</strong>
+              <span class="label-kicker">Submission path</span>
+              <strong>GitHub Issue Form</strong>
             </div>
-            <span id="auth-state" class="state-pill">Not authenticated</span>
+            <span class="state-pill is-good">GitHub sign-in required</span>
           </div>
 
-          <div id="auth-step" class="step-panel">
+          <div class="step-panel">
             <div>
               <span class="step-count">1</span>
-              <h2>Authenticate first</h2>
-              <p>GitHub authentication lets the page find private repos and dispatch the import workflow as you.</p>
+              <h2>Prepare a pinned commit</h2>
+              <p>Use a repository URL, branch, full commit hash, metadata path, and surface file path.</p>
             </div>
-            <button id="auth-button" type="button" class="secondary-action">Authenticate</button>
           </div>
 
-          <div id="device-panel" class="device-panel" hidden>
+          <div class="step-panel">
             <div>
-              <span class="label-kicker">GitHub device code</span>
-              <strong id="device-code">--------</strong>
+              <span class="step-count">2</span>
+              <h2>Submit the import form</h2>
+              <p>GitHub records your username, then the workflow checks the import allowlist before validation.</p>
             </div>
-            <a id="device-link" class="secondary-action" href="https://github.com/login/device" target="_blank" rel="noreferrer">
-              Open GitHub
+            <a class="primary-action" href="https://github.com/clemenskuske/lean-meta-library-import-site/issues/new?template=import-paper.yml">
+              Open Import Form
             </a>
           </div>
 
-          <div id="repo-step" class="step-panel">
-            <div>
-              <span class="step-count">2</span>
-              <h2>Repository</h2>
-              <p>Paste the GitHub repo URL. Branch and commit are resolved from GitHub when possible.</p>
-            </div>
-            <div class="input-row">
-              <label>
-                <span>GitHub repository URL</span>
-                <input
-                  id="repo-url"
-                  autocomplete="off"
-                  inputmode="url"
-                  placeholder="https://github.com/owner/repo">
-              </label>
-              <button id="repo-lookup-button" type="button" class="secondary-action">Find repo</button>
-            </div>
-            <p id="repo-summary" class="summary-line"></p>
-          </div>
-
-          <div id="branch-step" class="step-panel">
+          <div class="step-panel">
             <div>
               <span class="step-count">3</span>
-              <h2>Branch and commit</h2>
-              <p>The workflow will import the exact commit shown here.</p>
-            </div>
-            <div class="field-grid">
-              <label id="branch-select-wrap">
-                <span>Branch</span>
-                <select id="branch-select"></select>
-              </label>
-              <div class="display-field">
-                <span>Selected branch</span>
-                <strong id="branch-display">main</strong>
-              </div>
-              <label class="wide">
-                <span>Pinned commit hash</span>
-                <input
-                  id="commit-display"
-                  autocomplete="off"
-                  spellcheck="false"
-                  readonly>
-              </label>
+              <h2>Watch the issue</h2>
+              <p>The workflow comments with acceptance, validation failures, or a passing checker and build result.</p>
             </div>
           </div>
+        </div>
 
-          <div id="metadata-step" class="step-panel">
-            <div>
-              <span class="step-count">4</span>
-              <h2>Metadata</h2>
-              <p>Choose a root-level YAML file or type a relative metadata path.</p>
-            </div>
-            <div id="yaml-choices" class="choice-row" aria-label="Root-level YAML files"></div>
-            <div class="input-row">
-              <label>
-                <span>Metadata path</span>
-                <input
-                  id="metadata-path"
-                  autocomplete="off"
-                  value="metadata-meta-library.yaml">
-              </label>
-              <button id="metadata-check-button" type="button" class="secondary-action">Check metadata</button>
-            </div>
-            <p id="metadata-summary" class="summary-line"></p>
-          </div>
-
-          <div id="message" class="message" role="status" aria-live="polite"></div>
-
-          <div class="actions">
-            <button id="dispatch-button" type="submit" class="primary-action">Dispatch import</button>
-          </div>
-        </form>
-
-        <aside class="run-panel" aria-label="Workflow response">
-          <span class="label-kicker">Latest response</span>
-          <div id="result-title" class="result-title">Ready</div>
-          <p id="result-copy">
-            Start with GitHub authentication. The import details will appear
-            one step at a time after authentication succeeds.
-          </p>
-          <a id="run-link" class="run-link" href="#" hidden>Open workflow</a>
+        <aside class="run-panel" aria-label="Import requirements">
+          <span class="label-kicker">Required fields</span>
+          <div class="result-title">Pinned submission</div>
+          <ul class="requirement-list">
+            <li>GitHub repository URL</li>
+            <li>Branch name</li>
+            <li>Full 40-character commit hash</li>
+            <li>Metadata path</li>
+            <li>Surface file path</li>
+            <li>Optional reuse feedback paths</li>
+          </ul>
         </aside>
       </section>
     </main>
-
-    <script src="./config.js?v=oauth-device-flow"></script>
-    <script src="./app.js?v=oauth-device-flow"></script>
   </body>
 </html>

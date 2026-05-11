@@ -1,8 +1,8 @@
 # Import Flow
 
-This repository owns the import controller: the static GitHub Pages form, the
-workflow dispatch target, and the instructions for making a submitted paper
-repo import-ready. The accepted Lean surfaces and catalog data live in
+This repository owns the import controller: the GitHub Issue Form, the workflow
+target, and the instructions for making a submitted paper repo import-ready.
+The accepted Lean surfaces and catalog data live in
 `clemenskuske/lean-meta-library`.
 
 ## 1. Paper Repo Exists
@@ -63,10 +63,10 @@ Optional information:
 The user submits the paper repo URL, branch, full commit hash, metadata path,
 and surface file path. The system must never import latest `main` implicitly.
 
-The submission form is hosted from this import-site repository. The static page
-must not contain a secret token. The page uses GitHub OAuth device flow through
-the configured OAuth proxy, stores the resulting user token only in browser
-memory, and calls the `workflow_dispatch` REST endpoint.
+The submission form is hosted as a GitHub Issue Form in this import-site
+repository. Opening an issue requires a signed-in GitHub user, and the workflow
+runs from the `issues` event. The landing page only links to the issue form and
+does not contain tokens or OAuth code.
 
 The real authorization still happens in the workflow. The workflow checks
 `github.actor` against `.github/import-allowed-users.txt` before checking out or

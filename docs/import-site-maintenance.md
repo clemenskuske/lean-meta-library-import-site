@@ -5,32 +5,33 @@ GitHub Action it triggers.
 
 ## Goal
 
-Maintain a small GitHub Pages website that lets approved GitHub users submit a
-paper formalization repo for import into the meta-library.
+Maintain a GitHub Issue Form and workflow that let signed-in, approved GitHub
+users submit a paper formalization repo for import into the meta-library.
 
-The page triggers a GitHub Actions workflow through GitHub's
-`workflow_dispatch` REST API. The page must not contain a personal access
-token, client secret, or any other private credential.
+The issue form triggers a GitHub Actions workflow through the `issues` event.
+The repository may also keep `workflow_dispatch` for manual maintainer runs.
+No public page should contain a personal access token, client secret, or any
+other private credential.
 
 ## Required User Flow
 
-1. User opens the GitHub Pages import page.
-2. User authenticates through GitHub OAuth device flow.
+1. User opens the GitHub import issue form.
+2. GitHub requires the user to be signed in before submitting the form.
 3. User enters the submitted paper repo details.
-4. The page checks repository, branch, commit, and metadata through GitHub APIs.
-5. The page calls the workflow dispatch endpoint for the import workflow.
-6. The page shows whether dispatch succeeded and links to the workflow run if
-   it can locate the run.
-7. The GitHub Action checks whether `github.actor` is allowed.
-8. The GitHub Action validates inputs, checks the submitted repo, and then
+4. The GitHub Action checks whether `github.actor` is allowed.
+5. The workflow parses and validates the issue fields.
+6. The workflow comments acceptance, validation failures, or success on the
+   issue.
+7. The GitHub Action validates inputs, checks the submitted repo, and then
    proceeds with the import workflow.
 
-## Website Requirements
+## Issue Form Requirements
 
-Host the page with GitHub Pages. It can be plain HTML/CSS/JavaScript or a small
-static frontend build, but the output must be static files.
+The canonical submission UI is `.github/ISSUE_TEMPLATE/import-paper.yml`.
+GitHub controls the visual styling; keep fields clear and stable because the
+workflow parser reads the issue body headings.
 
-The page must provide fields for:
+The issue form must provide fields for:
 
 - source repository URL
 - source branch
@@ -39,10 +40,9 @@ The page must provide fields for:
 - surface file path, normally read from metadata and defaulting to
   `Surface.lean`
 
-The workflow also accepts optional usage feedback and usage lessons paths. The
-UI may default these to empty until those controls are needed.
+The workflow also accepts optional usage feedback and usage lessons paths.
 
-The page should validate before dispatch:
+The workflow should validate before checking out submitted code:
 
 - source repository resolves to `owner/repo`
 - branch contains only safe branch/path characters
@@ -50,63 +50,34 @@ The page should validate before dispatch:
 - file paths contain only safe path characters
 - optional paths may be empty
 
-The page must show clear errors for:
+The workflow must comment clear errors for:
 
 - invalid form input
-- OAuth/device-flow denial or expiration
-- missing GitHub permissions
-- failed workflow dispatch API call
+- unauthorized GitHub actor
+- missing import-site secrets
+- failed submitted-repository checkout or validation
 
-The page should not claim that frontend validation is security. The real
+The issue form should not claim that form validation is security. The real
 security boundary is the GitHub Action.
 
-## OAuth Requirement
+## GitHub Authentication Requirement
 
-Use GitHub OAuth device flow.
+Use GitHub Issues for authentication. A public repository issue form can be
+submitted by signed-in GitHub users without making them repository members.
+The workflow must still authorize `github.actor` against
+`.github/import-allowed-users.txt` before checking out submitted code.
 
-The static page may contain the OAuth app client ID. It must not contain a
-client secret. The OAuth app must have device flow enabled in GitHub settings.
+## Workflow Trigger Requirements
 
-GitHub's device-flow endpoints do not support browser CORS preflight. Use the
-small OAuth proxy in `oauth-proxy-worker.js`, and configure its allowed origin
-to the GitHub Pages origin for this site.
-
-The user token must have permission to trigger workflows in this import-site
-repo and read the submitted paper repo. For private submitted repositories, the
-OAuth scope normally needs `repo`.
-
-## Workflow Dispatch Requirement
-
-The page must call:
+The primary trigger is:
 
 ```text
-POST https://api.github.com/repos/OWNER/REPO/actions/workflows/ingest-paper.yml/dispatches
+issues.opened, issues.edited, issues.reopened
 ```
 
-The request body must use the default branch ref and the workflow inputs:
-
-```json
-{
-  "ref": "main",
-  "inputs": {
-    "source_repository": "some-owner/some-paper-repo",
-    "source_branch": "main",
-    "source_commit": "0000000000000000000000000000000000000000",
-    "metadata_path": "metadata-meta-library.yaml",
-    "surface_path": "Surface.lean",
-    "usage_feedback_path": "",
-    "usage_lessons_path": ""
-  }
-}
-```
-
-Use these headers:
-
-```text
-Accept: application/vnd.github+json
-Authorization: Bearer <user-access-token>
-X-GitHub-Api-Version: 2022-11-28
-```
+The workflow should ignore issues that do not carry the `import-submission`
+label or the `Import paper:` title prefix. Keep `workflow_dispatch` inputs as a
+manual maintainer fallback if useful.
 
 ## GitHub Action Requirements
 
@@ -114,8 +85,9 @@ Maintain `.github/workflows/ingest-paper.yml`.
 
 The workflow must include:
 
-- `on: workflow_dispatch`
-- inputs matching the website fields
+- `on: issues`
+- optional `on: workflow_dispatch` for manual maintainer runs
+- issue parser outputs matching the import fields
 - an authorization job that checks `github.actor`
 - an input validation step before checkout or import work
 - a submitted-repo checkout pinned to `source_commit`
@@ -135,7 +107,7 @@ Unauthorized users must fail immediately with a clear message.
 
 ## Security Rules
 
-Do not put secrets in GitHub Pages.
+Do not put secrets in GitHub Pages or issue templates.
 
 Do not trust frontend validation.
 
@@ -163,5 +135,5 @@ These files remain in `clemenskuske/lean-meta-library`:
 - `allowed-axioms.lean`
 - `schemas/`
 
-This repository owns the import-site UI, workflow, allowlist, OAuth proxy, paper
-preparation guide, and submission templates.
+This repository owns the import issue form, landing page, workflow, allowlist,
+paper preparation guide, and submission templates.
