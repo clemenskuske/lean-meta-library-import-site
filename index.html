@@ -14,8 +14,8 @@
           <h1 id="page-title">Paper import</h1>
         </div>
         <p class="guardrail">
-          This page dispatches the import workflow with your GitHub account.
-          The workflow enforces the allowlist and validates the pinned repo again.
+          Authenticate, point at a GitHub paper repo, choose its metadata file,
+          and dispatch a pinned import.
         </p>
       </section>
 
@@ -29,71 +29,13 @@
             <span id="auth-state" class="state-pill">Not authenticated</span>
           </div>
 
-          <div class="field-grid">
-            <label>
-              <span>Paper repository</span>
-              <input
-                name="source_repository"
-                autocomplete="off"
-                inputmode="url"
-                placeholder="owner/repo"
-                required>
-            </label>
-
-            <label>
-              <span>Branch</span>
-              <input
-                name="source_branch"
-                autocomplete="off"
-                value="main"
-                required>
-            </label>
-
-            <label class="wide">
-              <span>Pinned commit hash</span>
-              <input
-                name="source_commit"
-                autocomplete="off"
-                minlength="40"
-                maxlength="40"
-                spellcheck="false"
-                placeholder="0000000000000000000000000000000000000000"
-                required>
-            </label>
-
-            <label>
-              <span>Metadata path</span>
-              <input
-                name="metadata_path"
-                autocomplete="off"
-                value="metadata-meta-library.yaml"
-                required>
-            </label>
-
-            <label>
-              <span>Surface file path</span>
-              <input
-                name="surface_path"
-                autocomplete="off"
-                value="Surface.lean"
-                required>
-            </label>
-
-            <label>
-              <span>Usage feedback path</span>
-              <input
-                name="usage_feedback_path"
-                autocomplete="off"
-                placeholder="optional">
-            </label>
-
-            <label>
-              <span>Usage lessons path</span>
-              <input
-                name="usage_lessons_path"
-                autocomplete="off"
-                placeholder="optional">
-            </label>
+          <div id="auth-step" class="step-panel">
+            <div>
+              <span class="step-count">1</span>
+              <h2>Authenticate first</h2>
+              <p>GitHub authentication lets the page find private repos and dispatch the import workflow as you.</p>
+            </div>
+            <button id="auth-button" type="button" class="secondary-action">Authenticate</button>
           </div>
 
           <div id="device-panel" class="device-panel" hidden>
@@ -106,10 +48,75 @@
             </a>
           </div>
 
+          <div id="repo-step" class="step-panel">
+            <div>
+              <span class="step-count">2</span>
+              <h2>Repository</h2>
+              <p>Paste the GitHub repo URL. Branch and commit are resolved from GitHub when possible.</p>
+            </div>
+            <div class="input-row">
+              <label>
+                <span>GitHub repository URL</span>
+                <input
+                  id="repo-url"
+                  autocomplete="off"
+                  inputmode="url"
+                  placeholder="https://github.com/owner/repo">
+              </label>
+              <button id="repo-lookup-button" type="button" class="secondary-action">Find repo</button>
+            </div>
+            <p id="repo-summary" class="summary-line"></p>
+          </div>
+
+          <div id="branch-step" class="step-panel">
+            <div>
+              <span class="step-count">3</span>
+              <h2>Branch and commit</h2>
+              <p>The workflow will import the exact commit shown here.</p>
+            </div>
+            <div class="field-grid">
+              <label id="branch-select-wrap">
+                <span>Branch</span>
+                <select id="branch-select"></select>
+              </label>
+              <div class="display-field">
+                <span>Selected branch</span>
+                <strong id="branch-display">main</strong>
+              </div>
+              <label class="wide">
+                <span>Pinned commit hash</span>
+                <input
+                  id="commit-display"
+                  autocomplete="off"
+                  spellcheck="false"
+                  readonly>
+              </label>
+            </div>
+          </div>
+
+          <div id="metadata-step" class="step-panel">
+            <div>
+              <span class="step-count">4</span>
+              <h2>Metadata</h2>
+              <p>Choose a root-level YAML file or type a relative metadata path.</p>
+            </div>
+            <div id="yaml-choices" class="choice-row" aria-label="Root-level YAML files"></div>
+            <div class="input-row">
+              <label>
+                <span>Metadata path</span>
+                <input
+                  id="metadata-path"
+                  autocomplete="off"
+                  value="metadata-meta-library.yaml">
+              </label>
+              <button id="metadata-check-button" type="button" class="secondary-action">Check metadata</button>
+            </div>
+            <p id="metadata-summary" class="summary-line"></p>
+          </div>
+
           <div id="message" class="message" role="status" aria-live="polite"></div>
 
           <div class="actions">
-            <button id="auth-button" type="button" class="secondary-action">Authenticate</button>
             <button id="dispatch-button" type="submit" class="primary-action">Dispatch import</button>
           </div>
         </form>
@@ -118,8 +125,8 @@
           <span class="label-kicker">Latest response</span>
           <div id="result-title" class="result-title">Ready</div>
           <p id="result-copy">
-            Authenticate with GitHub, submit a pinned paper commit, and watch
-            the Actions run for the validation and meta-library build result.
+            Start with GitHub authentication. The import details will appear
+            one step at a time.
           </p>
           <a id="run-link" class="run-link" href="#" hidden>Open workflow</a>
         </aside>

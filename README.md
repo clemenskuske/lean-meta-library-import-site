@@ -19,9 +19,16 @@ secret, personal access token, or other private credential.
 
 - Load the Pages URL and confirm the target workflow shows the meta-library
   repository.
-- Submit an invalid repo, branch, SHA, and path to confirm client-side errors.
+- Confirm the first visible step is GitHub authentication and the dispatch
+  button is disabled.
 - Authenticate with a GitHub account that can dispatch workflows in the
   meta-library repository.
+- Submit an invalid repo URL and confirm the page reports that the repo cannot
+  be found or resolved.
+- Submit a known paper repo URL and confirm the branch is shown, the latest
+  branch commit is filled, and root-level YAML files are offered when present.
+- Choose or type the metadata path and confirm the surface file path is read
+  from metadata before dispatch is enabled.
 - Dispatch a known pinned paper repo commit.
 - Confirm `.github/workflows/ingest-paper.yml` starts.
 - Confirm an unauthorized GitHub user fails in the first workflow job.
