@@ -8,7 +8,7 @@ body:
         Submit an exact GitHub commit that already builds as a Lean/Lake package.
 
         The workflow will check your GitHub username against the import allowlist,
-        validate these fields, inspect the metadata and surface file, then run the
+        validate these fields, inspect the metadata-declared files, then run the
         submission checker against the pinned commit.
 
   - type: input
@@ -47,41 +47,10 @@ body:
     validations:
       required: true
 
-  - type: input
-    id: surface_path
-    attributes:
-      label: Surface file path
-      description: Relative path to the surface file. This must match metadata surface_file.
-      value: Surface.lean
-    validations:
-      required: true
-
-  - type: input
-    id: usage_feedback_path
-    attributes:
-      label: Usage feedback path
-      description: Optional relative path to used-formalizations.json.
-      placeholder: used-formalizations.json
-    validations:
-      required: false
-
-  - type: input
-    id: usage_lessons_path
-    attributes:
-      label: Usage lessons path
-      description: Optional relative path to used-formalization-lessons.md.
-      placeholder: used-formalization-lessons.md
-    validations:
-      required: false
-
   - type: checkboxes
-    id: confirmations
+    id: submission_permission
     attributes:
-      label: Confirmation
+      label: Submission permission
       options:
-        - label: I am submitting this exact pinned commit, not latest main.
-          required: true
-        - label: The repository contains a reproducible Lean/Lake package with committed lake-manifest.json.
-          required: true
-        - label: The surface file is an alias-only import boundary with no sorry, admit, unapproved axiom, or unapproved constant.
+        - label: I am allowed to submit these results to the library.
           required: true

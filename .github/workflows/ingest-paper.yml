@@ -18,18 +18,6 @@ on:
         description: "Path to metadata-meta-library.yaml in the paper repo"
         required: true
         default: "metadata-meta-library.yaml"
-      surface_path:
-        description: "Path to the surface file in the paper repo"
-        required: true
-        default: "Surface.lean"
-      usage_feedback_path:
-        description: "Optional path to used-formalizations.json in the paper repo"
-        required: false
-        default: ""
-      usage_lessons_path:
-        description: "Optional path to used-formalization-lessons.md in the paper repo"
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -48,9 +36,6 @@ jobs:
       source_branch: ${{ steps.submission.outputs.source_branch }}
       source_commit: ${{ steps.submission.outputs.source_commit }}
       metadata_path: ${{ steps.submission.outputs.metadata_path }}
-      surface_path: ${{ steps.submission.outputs.surface_path }}
-      usage_feedback_path: ${{ steps.submission.outputs.usage_feedback_path }}
-      usage_lessons_path: ${{ steps.submission.outputs.usage_lessons_path }}
     steps:
       - name: Checkout import controller
         uses: actions/checkout@v4
@@ -211,13 +196,11 @@ jobs:
           fi
 
       - name: Validate metadata and surface declaration
+        id: metadata
         env:
           SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
           SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
           METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
-          SURFACE_PATH: ${{ needs.prepare.outputs.surface_path }}
-          USAGE_FEEDBACK_PATH: ${{ needs.prepare.outputs.usage_feedback_path }}
-          USAGE_LESSONS_PATH: ${{ needs.prepare.outputs.usage_lessons_path }}
         run: node import-controller/.github/scripts/validate-submission-metadata.mjs
 
       - name: Build checker container
@@ -227,9 +210,9 @@ jobs:
         shell: bash
         env:
           METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
-          SURFACE_PATH: ${{ needs.prepare.outputs.surface_path }}
-          USAGE_FEEDBACK_PATH: ${{ needs.prepare.outputs.usage_feedback_path }}
-          USAGE_LESSONS_PATH: ${{ needs.prepare.outputs.usage_lessons_path }}
+          SURFACE_PATH: ${{ steps.metadata.outputs.surface_path }}
+          USAGE_FEEDBACK_PATH: ${{ steps.metadata.outputs.usage_feedback_path }}
+          USAGE_LESSONS_PATH: ${{ steps.metadata.outputs.usage_lessons_path }}
         run: |
           EXTRA_ARGS=()
           if [ -n "$USAGE_FEEDBACK_PATH" ]; then
@@ -253,12 +236,12 @@ jobs:
         shell: bash
         env:
           METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
-          SURFACE_PATH: ${{ needs.prepare.outputs.surface_path }}
+          SURFACE_PATH: ${{ steps.metadata.outputs.surface_path }}
           SOURCE_REPOSITORY: ${{ needs.prepare.outputs.source_repository }}
           SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
           SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
-          USAGE_FEEDBACK_PATH: ${{ needs.prepare.outputs.usage_feedback_path }}
-          USAGE_LESSONS_PATH: ${{ needs.prepare.outputs.usage_lessons_path }}
+          USAGE_FEEDBACK_PATH: ${{ steps.metadata.outputs.usage_feedback_path }}
+          USAGE_LESSONS_PATH: ${{ steps.metadata.outputs.usage_lessons_path }}
           IMPORT_USER_ID: ${{ github.actor }}
         run: |
           EXTRA_ARGS=()

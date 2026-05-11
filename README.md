@@ -39,11 +39,11 @@ token in the static site or issue form.
 ## Manual Test Checklist
 
 - Open the GitHub import issue form and confirm it asks for repo URL, branch,
-  full commit hash, metadata path, surface path, and optional reuse paths.
+  full commit hash, metadata path, and submission permission.
 - Submit a malformed test issue and confirm the workflow comments with a parse
   or validation error.
 - Submit as an unauthorized GitHub user and confirm the workflow comments with
   an allowlist failure before any submitted repo checkout.
 - Submit a known pinned paper repo commit and confirm the workflow checks out
-  that exact commit, validates metadata/surface paths, runs the checker, builds
-  the meta-library, and comments the result on the issue.
+  that exact commit, reads metadata-declared paths, runs the checker, builds the
+  meta-library, and comments the result on the issue.

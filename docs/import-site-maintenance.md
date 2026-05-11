@@ -37,18 +37,20 @@ The issue form must provide fields for:
 - source branch
 - full 40-character commit hash
 - metadata file path, default `metadata-meta-library.yaml`
-- surface file path, normally read from metadata and defaulting to
-  `Surface.lean`
+- confirmation that the submitter is allowed to submit the results to the
+  library
 
-The workflow also accepts optional usage feedback and usage lessons paths.
+The workflow reads the surface file path and optional usage feedback paths from
+metadata.
 
 The workflow should validate before checking out submitted code:
 
 - source repository resolves to `owner/repo`
 - branch contains only safe branch/path characters
 - commit is a full 40-character hex SHA
-- file paths contain only safe path characters
-- optional paths may be empty
+- metadata path contains only safe path characters
+- metadata-declared surface and optional paths contain only safe path
+  characters
 
 The workflow must comment clear errors for:
 
@@ -87,7 +89,7 @@ The workflow must include:
 
 - `on: issues`
 - optional `on: workflow_dispatch` for manual maintainer runs
-- issue parser outputs matching the import fields
+- issue parser outputs matching the form fields
 - an authorization job that checks `github.actor`
 - an input validation step before checkout or import work
 - a submitted-repo checkout pinned to `source_commit`
@@ -121,7 +123,8 @@ Validate at least:
 - `source_repository` matches `^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`
 - `source_branch` matches `^[A-Za-z0-9._/-]+$`
 - `source_commit` matches `^[0-9a-fA-F]{40}$`
-- metadata/surface/feedback paths match `^[A-Za-z0-9._/-]+$`
+- metadata and metadata-declared surface/feedback paths match
+  `^[A-Za-z0-9._/-]+$`
 
 The workflow should treat submitted repo contents as untrusted until the checker
 has passed.

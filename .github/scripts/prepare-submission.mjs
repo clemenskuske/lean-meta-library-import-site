@@ -4,10 +4,7 @@ const fieldLabels = {
   repo_url: "GitHub repository URL",
   branch: "Branch",
   commit_hash: "Pinned commit hash",
-  metadata_path: "Metadata path",
-  surface_path: "Surface file path",
-  usage_feedback_path: "Usage feedback path",
-  usage_lessons_path: "Usage lessons path"
+  metadata_path: "Metadata path"
 };
 
 const patterns = {
@@ -93,10 +90,7 @@ function issueSubmission(event) {
     source_repository: fields[fieldLabels.repo_url] || "",
     source_branch: fields[fieldLabels.branch] || "",
     source_commit: fields[fieldLabels.commit_hash] || "",
-    metadata_path: fields[fieldLabels.metadata_path] || "",
-    surface_path: fields[fieldLabels.surface_path] || "",
-    usage_feedback_path: fields[fieldLabels.usage_feedback_path] || "",
-    usage_lessons_path: fields[fieldLabels.usage_lessons_path] || ""
+    metadata_path: fields[fieldLabels.metadata_path] || ""
   };
 }
 
@@ -106,10 +100,7 @@ function workflowDispatchSubmission(event) {
     source_repository: inputs.source_repository || "",
     source_branch: inputs.source_branch || "",
     source_commit: inputs.source_commit || "",
-    metadata_path: inputs.metadata_path || "",
-    surface_path: inputs.surface_path || "",
-    usage_feedback_path: inputs.usage_feedback_path || "",
-    usage_lessons_path: inputs.usage_lessons_path || ""
+    metadata_path: inputs.metadata_path || ""
   };
 }
 
@@ -127,17 +118,11 @@ if (!patterns.repository.test(normalizedRepository)) fail("Paper repository must
 if (!patterns.branch.test(submission.source_branch)) fail("Branch contains unsupported characters.");
 if (!patterns.commit.test(submission.source_commit)) fail("Commit hash must be a full 40-character hex SHA.");
 if (!safePath(submission.metadata_path)) fail("Metadata path must be a relative safe path.");
-if (!safePath(submission.surface_path)) fail("Surface path must be a relative safe path.");
-if (!safePath(submission.usage_feedback_path, true)) fail("Usage feedback path must be empty or a relative safe path.");
-if (!safePath(submission.usage_lessons_path, true)) fail("Usage lessons path must be empty or a relative safe path.");
 
 output("source_repository", normalizedRepository);
 output("source_branch", submission.source_branch);
 output("source_commit", submission.source_commit.toLowerCase());
 output("metadata_path", submission.metadata_path);
-output("surface_path", submission.surface_path);
-output("usage_feedback_path", submission.usage_feedback_path);
-output("usage_lessons_path", submission.usage_lessons_path);
 
 fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
   "## Parsed Import Submission",
@@ -146,8 +131,6 @@ fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
   `- Branch: \`${submission.source_branch}\``,
   `- Commit: \`${submission.source_commit.toLowerCase()}\``,
   `- Metadata: \`${submission.metadata_path}\``,
-  `- Surface: \`${submission.surface_path}\``,
-  submission.usage_feedback_path ? `- Usage feedback: \`${submission.usage_feedback_path}\`` : "- Usage feedback: none",
-  submission.usage_lessons_path ? `- Usage lessons: \`${submission.usage_lessons_path}\`` : "- Usage lessons: none",
+  "- Surface and optional reuse files: read from metadata",
   ""
 ].join("\n"));

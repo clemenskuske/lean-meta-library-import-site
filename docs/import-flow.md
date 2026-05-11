@@ -60,8 +60,9 @@ Optional information:
 
 ## 4. Submission Happens
 
-The user submits the paper repo URL, branch, full commit hash, metadata path,
-and surface file path. The system must never import latest `main` implicitly.
+The user submits the paper repo URL, branch, full commit hash, and metadata
+path. The surface file and optional reuse-feedback files are read from metadata.
+The system must never import latest `main` implicitly.
 
 The submission form is hosted as a GitHub Issue Form in this import-site
 repository. Opening an issue requires a signed-in GitHub user, and the workflow

@@ -58,8 +58,9 @@ meta-library repo.
 
 The user submits through the GitHub Issue Form. GitHub requires sign-in before
 issue creation, so `github.actor` identifies the submitter. The workflow parses
-the submitted repository, branch, pinned commit, metadata file, and surface file
-from the issue body, then validates the pinned submission.
+the submitted repository, branch, pinned commit, and metadata file from the
+issue body. Surface and optional reuse-feedback paths are read from metadata,
+then the workflow validates the pinned submission.
 
 The static landing page and issue form must never contain a client secret,
 personal access token, or cross-repo push token.

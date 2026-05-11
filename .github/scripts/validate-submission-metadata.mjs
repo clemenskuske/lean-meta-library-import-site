@@ -22,6 +22,10 @@ function fail(message) {
   process.exit(1);
 }
 
+function output(name, value) {
+  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+}
+
 function safePath(value, optional = false) {
   if (optional && value === "") return true;
   if (!patterns.path.test(value)) return false;
@@ -50,6 +54,20 @@ function metadataValue(text, field) {
   }
 }
 
+function metadataOptionalFile(text, field) {
+  const yamlSection = text.match(/^optional_files\s*:\s*\n((?:[ \t]+[A-Za-z0-9_-]+\s*:[^\n]*\n?)*)/m);
+  const yamlMatch = yamlSection?.[1]?.match(new RegExp(`^[ \\t]+${field}\\s*:\\s*["']?([^"'\n#]+)`, "m"));
+  if (yamlMatch?.[1]) return yamlMatch[1].trim();
+
+  try {
+    const json = JSON.parse(text);
+    const value = json.optional_files?.[field];
+    return typeof value === "string" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function assertFile(root, relativePath, label) {
   if (!safePath(relativePath)) fail(`${label} must be a relative safe path.`);
   const absolutePath = path.join(root, relativePath);
@@ -60,11 +78,8 @@ function assertFile(root, relativePath, label) {
 
 const repoRoot = path.resolve("submitted-paper");
 const metadataPath = process.env.METADATA_PATH || "";
-const surfacePath = process.env.SURFACE_PATH || "";
 const sourceBranch = process.env.SOURCE_BRANCH || "";
 const sourceCommit = (process.env.SOURCE_COMMIT || "").toLowerCase();
-const usageFeedbackPath = process.env.USAGE_FEEDBACK_PATH || "";
-const usageLessonsPath = process.env.USAGE_LESSONS_PATH || "";
 
 assertFile(repoRoot, metadataPath, "Metadata file");
 const metadataText = fs.readFileSync(path.join(repoRoot, metadataPath), "utf8");
@@ -92,19 +107,27 @@ if (metadataBranch && metadataBranch !== sourceBranch) {
 }
 
 const metadataSurface = metadataValue(metadataText, "surface_file");
+let surfacePath = "";
 if (!metadataSurface) {
   errors.push("surface_file is missing from metadata.");
 } else if (!safePath(metadataSurface)) {
   errors.push("surface_file must be a relative safe path.");
-} else if (metadataSurface !== surfacePath) {
-  errors.push(`surface_file in metadata (${metadataSurface}) does not match submitted surface path (${surfacePath}).`);
+} else {
+  surfacePath = metadataSurface;
 }
 
 if (errors.length > 0) fail(errors.join("\n"));
 
+const usageFeedbackPath = metadataOptionalFile(metadataText, "used_formalizations") || "";
+const usageLessonsPath = metadataOptionalFile(metadataText, "used_formalization_lessons") || "";
+
 assertFile(repoRoot, surfacePath, "Surface file");
 if (usageFeedbackPath) assertFile(repoRoot, usageFeedbackPath, "Usage feedback file");
 if (usageLessonsPath) assertFile(repoRoot, usageLessonsPath, "Usage lessons file");
+
+output("surface_path", surfacePath);
+output("usage_feedback_path", usageFeedbackPath);
+output("usage_lessons_path", usageLessonsPath);
 
 fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
   "## Metadata Preflight",
