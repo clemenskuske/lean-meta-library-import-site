@@ -186,7 +186,7 @@ async function githubJson(url, options = {}) {
 
 async function beginDeviceFlow() {
   if (!config.githubClientId || config.githubClientId === "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID") {
-    throw new Error("Set githubClientId in site/config.js before using OAuth.");
+    throw new Error("Set githubClientId in config.js before using OAuth.");
   }
 
   const params = new URLSearchParams({
@@ -617,7 +617,7 @@ async function dispatchWorkflow(event) {
   const errors = state.repository && state.metadataOk ? validateInputs(inputs) : ["Resolve the repository and validate metadata before dispatching."];
 
   if (!target.owner || !target.repo) {
-    errors.push("Configure workflowOwner and workflowRepo in site/config.js, or serve this from a GitHub project Pages URL.");
+    errors.push("Configure workflowOwner and workflowRepo in config.js, or serve this from a GitHub project Pages URL.");
   }
   if (!state.accessToken) {
     errors.push("Authenticate with GitHub before dispatching the workflow.");
@@ -687,7 +687,7 @@ function initialize() {
   const target = workflowTarget();
   targetRepo.textContent = target.owner && target.repo
     ? `${target.owner}/${target.repo} @ ${target.ref}`
-    : "Configure site/config.js";
+    : "Configure config.js";
   dispatchButton.disabled = true;
   setStep(repoStep, false);
   setStep(branchStep, false);
