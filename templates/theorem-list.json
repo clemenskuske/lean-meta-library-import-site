@@ -1,0 +1,20 @@
+{
+  "paper_id": "template-paper",
+  "version": "v1a1",
+  "items": [
+    {
+      "kind": "theorem",
+      "stable_lean_name": "MetaLibrary.TemplatePaper.main_result",
+      "source_lean_name": "TemplatePaper.Internal.main_result",
+      "paper_location": "Theorem 1.1",
+      "paper_statement": "Natural-language statement from the paper.",
+      "lean_statement": "Lean statement or exact pretty-printed type.",
+      "statement_dependencies": [],
+      "proof_dependencies": [],
+      "axiom_dependencies": [],
+      "search_text": "structural graph theory keywords",
+      "verification_status": "proved",
+      "notes": ""
+    }
+  ]
+}

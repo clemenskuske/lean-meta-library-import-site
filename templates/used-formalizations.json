@@ -1,0 +1,19 @@
+{
+  "reporting_paper_id": "new-paper-being-submitted",
+  "reporting_source_commit": "0000000000000000000000000000000000000000",
+  "reports": [
+    {
+      "target_paper_id": "template-paper",
+      "target_version": "v1a1",
+      "target_surface_module": "MetaLibrary.Papers.TemplatePaper.v1a1.Surface",
+      "outcome": "useful",
+      "imported": true,
+      "used_exported_items": [
+        "MetaLibrary.TemplatePaper.main_result"
+      ],
+      "missing_items": [],
+      "blocking_issues": [],
+      "notes": "Short structured note for aggregation."
+    }
+  ]
+}

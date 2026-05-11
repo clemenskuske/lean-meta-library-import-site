@@ -1,0 +1,26 @@
+{
+  "paper_id": "template-paper",
+  "paper_title": "Template Paper Title",
+  "lean_namespace": "TemplatePaper",
+  "current_versions": ["v1a1"],
+  "version_policy": "versions use v<generation><approach><update>; the approach letter identifies a formalization approach, and the trailing number identifies updates within that approach",
+  "versions": [
+    {
+      "version": "v1a1",
+      "surface_module": "MetaLibrary.Papers.TemplatePaper.v1a1.Surface",
+      "surface_path": "MetaLibrary/Papers/template-paper/v1a1/Surface.lean",
+      "theorem_list_path": "MetaLibrary/Papers/template-paper/v1a1/theorem-list.json",
+      "source_repo_url": "https://github.com/example/formalized-paper",
+      "source_branch": "main",
+      "source_commit": "0000000000000000000000000000000000000000",
+      "quality_status": "candidate"
+    }
+  ],
+  "online_source": "https://arxiv.org/abs/0000.00000",
+  "arxiv": "",
+  "doi": "",
+  "orcid": "",
+  "journal_or_conference": "",
+  "import_user_id": "",
+  "created_at": "2026-05-11"
+}

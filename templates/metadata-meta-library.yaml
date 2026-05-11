@@ -1,0 +1,45 @@
+paper_id: template-paper
+paper_title: "Template Paper Title"
+lean_namespace: TemplatePaper
+surface_file: Surface.lean
+root_import_file: TemplatePaper.lean
+source_repo_url: https://github.com/example/formalized-paper
+source_branch: main
+source_commit: 0000000000000000000000000000000000000000
+online_source: https://arxiv.org/abs/0000.00000
+arxiv: ""
+doi: ""
+orcid: ""
+journal_or_conference: ""
+import_user_id: ""
+
+surface_usage_notes: >
+  Explain which paper results are exported, which graph conventions are used,
+  and what a future agent should import first.
+
+exported_items:
+  - kind: theorem
+    stable_lean_name: MetaLibrary.TemplatePaper.main_result
+    source_lean_name: TemplatePaper.Internal.main_result
+    paper_location: "Theorem 1.1"
+    paper_statement: "Natural-language statement from the paper."
+    lean_statement: "Paste or summarize the Lean statement here."
+    statement_dependencies: []
+    proof_dependencies: []
+    axiom_dependencies: []
+    search_text: "keywords future agents may search for"
+    verification_status: proved
+    notes: ""
+
+paper_statement_connections:
+  - paper_location: "Theorem 1.1"
+    stable_lean_name: MetaLibrary.TemplatePaper.main_result
+    relation: "faithful"
+    caveats: ""
+
+optional_files:
+  hard_earned_lessons: hard-earned-lessons.md
+  used_formalizations: used-formalizations.json
+  used_formalization_lessons: used-formalization-lessons.md
+  quality_metadata: quality-metadata.json
+  token_usage_metadata: token-usage.json

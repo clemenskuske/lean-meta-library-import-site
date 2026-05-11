@@ -1,0 +1,17 @@
+{
+  "paper_id": "template-paper",
+  "version": "v1a1",
+  "quality_status": "candidate",
+  "human_review_status": "not_reviewed",
+  "agent_usability_score": null,
+  "mathematical_reliability_score": null,
+  "usage_count": 0,
+  "successful_uses": 0,
+  "failed_uses": 0,
+  "mixed_uses": 0,
+  "neutral_uses": 0,
+  "likes": 0,
+  "dislikes": 0,
+  "known_issues": [],
+  "last_reviewed_at": null
+}
