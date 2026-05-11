@@ -24,6 +24,8 @@ other private credential.
    issue.
 7. The GitHub Action validates inputs, checks the submitted repo, and then
    proceeds with the import workflow.
+8. Successful issue submissions are closed automatically after the import PR is
+   opened or updated.
 
 ## Issue Form Requirements
 
@@ -58,6 +60,9 @@ The workflow must comment clear errors for:
 - unauthorized GitHub actor
 - missing import-site secrets
 - failed submitted-repository checkout or validation
+
+Failed submissions should remain open so the submitter can edit the issue and
+rerun validation.
 
 The issue form should not claim that form validation is security. The real
 security boundary is the GitHub Action.

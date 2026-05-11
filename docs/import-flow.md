@@ -121,6 +121,10 @@ papers.csv
 The full meta-library is built before merge. One broken paper-version should
 not poison imports for future agents.
 
+After the import branch is pushed and the pull request is opened or updated,
+the import-site workflow comments on the submission issue and closes it as
+completed. Failed submissions remain open for correction.
+
 ## 8. Lookup Data Is Updated
 
 `papers.csv` is the agent lookup table. It tells an agent which papers exist,

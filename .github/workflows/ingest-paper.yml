@@ -361,6 +361,19 @@ jobs:
               ].join("\n")
             });
 
+      - name: Close successful issue submission
+        if: success() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: "closed",
+              state_reason: "completed"
+            });
+
       - name: Comment on failed issue validation
         if: failure() && github.event_name == 'issues'
         uses: actions/github-script@v7
