@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meta-library Paper Import</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Structural graph theory meta-library</p>
+          <h1 id="page-title">Paper import</h1>
+        </div>
+        <p class="guardrail">
+          This page dispatches the import workflow with your GitHub account.
+          The workflow enforces the allowlist and validates the pinned repo again.
+        </p>
+      </section>
+
+      <section class="workspace" aria-label="Import workflow dispatcher">
+        <form id="import-form" novalidate>
+          <div class="target-bar">
+            <div>
+              <span class="label-kicker">Target workflow</span>
+              <strong id="target-repo">Configure site/config.js</strong>
+            </div>
+            <span id="auth-state" class="state-pill">Not authenticated</span>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Paper repository</span>
+              <input
+                name="source_repository"
+                autocomplete="off"
+                inputmode="url"
+                placeholder="owner/repo"
+                required>
+            </label>
+
+            <label>
+              <span>Branch</span>
+              <input
+                name="source_branch"
+                autocomplete="off"
+                value="main"
+                required>
+            </label>
+
+            <label class="wide">
+              <span>Pinned commit hash</span>
+              <input
+                name="source_commit"
+                autocomplete="off"
+                minlength="40"
+                maxlength="40"
+                spellcheck="false"
+                placeholder="0000000000000000000000000000000000000000"
+                required>
+            </label>
+
+            <label>
+              <span>Metadata path</span>
+              <input
+                name="metadata_path"
+                autocomplete="off"
+                value="metadata-meta-library.yaml"
+                required>
+            </label>
+
+            <label>
+              <span>Surface file path</span>
+              <input
+                name="surface_path"
+                autocomplete="off"
+                value="Surface.lean"
+                required>
+            </label>
+
+            <label>
+              <span>Usage feedback path</span>
+              <input
+                name="usage_feedback_path"
+                autocomplete="off"
+                placeholder="optional">
+            </label>
+
+            <label>
+              <span>Usage lessons path</span>
+              <input
+                name="usage_lessons_path"
+                autocomplete="off"
+                placeholder="optional">
+            </label>
+          </div>
+
+          <div id="device-panel" class="device-panel" hidden>
+            <div>
+              <span class="label-kicker">GitHub device code</span>
+              <strong id="device-code">--------</strong>
+            </div>
+            <a id="device-link" class="secondary-action" href="https://github.com/login/device" target="_blank" rel="noreferrer">
+              Open GitHub
+            </a>
+          </div>
+
+          <div id="message" class="message" role="status" aria-live="polite"></div>
+
+          <div class="actions">
+            <button id="auth-button" type="button" class="secondary-action">Authenticate</button>
+            <button id="dispatch-button" type="submit" class="primary-action">Dispatch import</button>
+          </div>
+        </form>
+
+        <aside class="run-panel" aria-label="Workflow response">
+          <span class="label-kicker">Latest response</span>
+          <div id="result-title" class="result-title">Ready</div>
+          <p id="result-copy">
+            Authenticate with GitHub, submit a pinned paper commit, and watch
+            the Actions run for the validation and meta-library build result.
+          </p>
+          <a id="run-link" class="run-link" href="#" hidden>Open workflow</a>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
