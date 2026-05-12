@@ -1,11 +1,15 @@
 import fs from "node:fs";
 
 const fieldLabels = {
-  repo_url: "GitHub repository URL",
-  branch: "Branch",
-  commit_hash: "Pinned commit hash",
-  metadata_path: "Metadata path"
+  commit_url: "GitHub commit URL",
+  metadata_path: "Metadata path",
+  submission_permission: "Submission permission"
 };
+
+const requiredIssueCheckboxes = [
+  "I am allowed to submit these results to the library.",
+  "I take responsibility for this submission and confirm that it is meant only to document the formalization; it contains no hidden instructions, prompts, or content intended to mislead agents, harm people, or compromise systems."
+];
 
 const patterns = {
   repository: /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/,
@@ -13,6 +17,9 @@ const patterns = {
   commit: /^[0-9a-fA-F]{40}$/,
   path: /^[A-Za-z0-9._/-]+$/
 };
+
+const githubApiBase = process.env.GITHUB_API_URL || "https://api.github.com";
+const githubToken = process.env.GITHUB_TOKEN || process.env.SUBMISSION_READ_TOKEN || process.env.GH_TOKEN || "";
 
 function fail(message) {
   fs.writeFileSync(".submission-error", message);
@@ -51,45 +58,144 @@ function parseIssueBody(body) {
   return fields;
 }
 
-function parseGitHubRepository(value) {
+function checkboxChecked(section, label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^- \\[[xX]\\]\\s+${escaped}\\s*$`, "m").test(section || "");
+}
+
+function parseGitHubCommitUrl(value) {
   const trimmed = value.trim();
-  if (patterns.repository.test(trimmed)) {
-    const [owner, repo] = trimmed.split("/");
-    return `${owner}/${repo.replace(/\.git$/i, "")}`;
-  }
-
-  const sshMatch = trimmed.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/i);
-  if (sshMatch) return `${sshMatch[1]}/${sshMatch[2]}`;
-
   let candidate = trimmed;
   if (/^github\.com\//i.test(candidate)) candidate = `https://${candidate}`;
-  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) candidate = `https://github.com/${candidate}`;
 
   let url;
   try {
     url = new URL(candidate);
   } catch {
-    throw new Error("GitHub repository URL must be a GitHub URL or owner/repo.");
+    throw new Error("GitHub commit URL must be a valid github.com commit link.");
   }
 
   if (url.hostname.toLowerCase() !== "github.com") {
-    throw new Error("GitHub repository URL must be on github.com.");
+    throw new Error("GitHub commit URL must be on github.com.");
   }
 
   const parts = url.pathname.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
-  if (parts.length < 2) {
-    throw new Error("GitHub repository URL must include owner and repository name.");
+  if (parts.length !== 4 || parts[2] !== "commit") {
+    throw new Error("GitHub commit URL must look like https://github.com/owner/repo/commit/<40-character-sha>.");
   }
 
-  return `${parts[0]}/${parts[1].replace(/\.git$/i, "")}`;
+  const repository = `${parts[0]}/${parts[1].replace(/\.git$/i, "")}`;
+  const commit = parts[3].toLowerCase();
+  if (!patterns.repository.test(repository)) throw new Error("Commit URL repository must resolve to owner/repo form.");
+  if (!patterns.commit.test(commit)) throw new Error("Commit URL must include a full 40-character hex SHA.");
+  return { repository, commit };
+}
+
+async function githubApi(path, description) {
+  const url = new URL(path, githubApiBase.endsWith("/") ? githubApiBase : `${githubApiBase}/`);
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "lean-meta-library-import-site"
+  };
+  if (githubToken) headers.Authorization = `Bearer ${githubToken}`;
+
+  let response;
+  try {
+    response = await fetch(url, { headers });
+  } catch (error) {
+    throw new Error(`${description} failed: ${error.message}`);
+  }
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      detail = (await response.json()).message || detail;
+    } catch {
+      // Keep the status text if the response body is not JSON.
+    }
+    const error = new Error(`${description} failed: ${response.status} ${detail}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}
+
+function chooseBranch(branches, defaultBranch) {
+  const names = [...new Set(branches)].sort((left, right) => left.localeCompare(right));
+  if (defaultBranch && names.includes(defaultBranch)) return defaultBranch;
+  if (names.length === 1) return names[0];
+  return "";
+}
+
+async function fetchAllBranches(repository) {
+  const branches = [];
+  for (let page = 1; page <= 10; page += 1) {
+    const pageBranches = await githubApi(
+      `/repos/${repository}/branches?per_page=100&page=${page}`,
+      "Reading repository branches"
+    );
+    branches.push(...pageBranches);
+    if (pageBranches.length < 100) break;
+  }
+  return branches;
+}
+
+async function branchContainsCommit(repository, commit, branchHeadSha) {
+  if (branchHeadSha.toLowerCase() === commit) return true;
+  const comparison = await githubApi(
+    `/repos/${repository}/compare/${commit}...${branchHeadSha}`,
+    "Checking whether a branch contains the submitted commit"
+  );
+  return comparison.status === "identical" || comparison.status === "ahead";
+}
+
+async function resolveSourceBranch(repository, commit) {
+  await githubApi(`/repos/${repository}/commits/${commit}`, "Reading submitted commit");
+  const repo = await githubApi(`/repos/${repository}`, "Reading repository metadata");
+  const defaultBranch = repo.default_branch || "";
+  const branches = await fetchAllBranches(repository);
+
+  const headBranches = branches
+    .filter((branch) => branch.commit?.sha?.toLowerCase() === commit)
+    .map((branch) => branch.name);
+  const exactBranch = chooseBranch(headBranches, defaultBranch);
+  if (exactBranch) return exactBranch;
+
+  const sortedBranches = [...branches].sort((left, right) => {
+    if (left.name === defaultBranch) return -1;
+    if (right.name === defaultBranch) return 1;
+    return left.name.localeCompare(right.name);
+  });
+
+  const containingBranches = [];
+  for (const branch of sortedBranches) {
+    if (!branch.commit?.sha) continue;
+    if (await branchContainsCommit(repository, commit, branch.commit.sha)) {
+      if (branch.name === defaultBranch) return branch.name;
+      containingBranches.push(branch.name);
+    }
+  }
+
+  const containingBranch = chooseBranch(containingBranches, defaultBranch);
+  if (containingBranch) return containingBranch;
+  if (containingBranches.length > 1) {
+    throw new Error(`Commit is contained in multiple branches (${containingBranches.join(", ")}), so the source branch is ambiguous.`);
+  }
+  throw new Error("Could not infer a source branch that contains the submitted commit.");
 }
 
 function issueSubmission(event) {
   const fields = parseIssueBody(event.issue?.body || "");
+  const permissionSection = fields[fieldLabels.submission_permission] || "";
+  for (const checkbox of requiredIssueCheckboxes) {
+    if (!checkboxChecked(permissionSection, checkbox)) {
+      fail(`Required checkbox is missing or unchecked: ${checkbox}`);
+    }
+  }
   return {
-    source_repository: fields[fieldLabels.repo_url] || "",
-    source_branch: fields[fieldLabels.branch] || "",
-    source_commit: fields[fieldLabels.commit_hash] || "",
+    source_commit_url: fields[fieldLabels.commit_url] || "",
     metadata_path: fields[fieldLabels.metadata_path] || ""
   };
 }
@@ -97,9 +203,7 @@ function issueSubmission(event) {
 function workflowDispatchSubmission(event) {
   const inputs = event.inputs || {};
   return {
-    source_repository: inputs.source_repository || "",
-    source_branch: inputs.source_branch || "",
-    source_commit: inputs.source_commit || "",
+    source_commit_url: inputs.source_commit_url || "",
     metadata_path: inputs.metadata_path || ""
   };
 }
@@ -107,29 +211,36 @@ function workflowDispatchSubmission(event) {
 const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
 const submission = event.inputs ? workflowDispatchSubmission(event) : issueSubmission(event);
 
-let normalizedRepository;
+let parsedCommit;
 try {
-  normalizedRepository = parseGitHubRepository(submission.source_repository);
+  parsedCommit = parseGitHubCommitUrl(submission.source_commit_url);
 } catch (error) {
   fail(error.message);
 }
 
-if (!patterns.repository.test(normalizedRepository)) fail("Paper repository must use owner/repo form.");
-if (!patterns.branch.test(submission.source_branch)) fail("Branch contains unsupported characters.");
-if (!patterns.commit.test(submission.source_commit)) fail("Commit hash must be a full 40-character hex SHA.");
 if (!safePath(submission.metadata_path)) fail("Metadata path must be a relative safe path.");
 
-output("source_repository", normalizedRepository);
-output("source_branch", submission.source_branch);
-output("source_commit", submission.source_commit.toLowerCase());
+let sourceBranch;
+try {
+  sourceBranch = await resolveSourceBranch(parsedCommit.repository, parsedCommit.commit);
+} catch (error) {
+  fail(error.message);
+}
+
+if (!patterns.branch.test(sourceBranch)) fail("Resolved branch contains unsupported characters.");
+
+output("source_repository", parsedCommit.repository);
+output("source_branch", sourceBranch);
+output("source_commit", parsedCommit.commit);
 output("metadata_path", submission.metadata_path);
 
 fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
   "## Parsed Import Submission",
   "",
-  `- Repository: \`${normalizedRepository}\``,
-  `- Branch: \`${submission.source_branch}\``,
-  `- Commit: \`${submission.source_commit.toLowerCase()}\``,
+  `- Commit URL: \`${submission.source_commit_url}\``,
+  `- Repository: \`${parsedCommit.repository}\``,
+  `- Branch: \`${sourceBranch}\``,
+  `- Commit: \`${parsedCommit.commit}\``,
   `- Metadata: \`${submission.metadata_path}\``,
   "- Surface and optional reuse files: read from metadata",
   ""

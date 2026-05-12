@@ -12,29 +12,11 @@ body:
         submission checker against the pinned commit.
 
   - type: input
-    id: repo_url
+    id: commit_url
     attributes:
-      label: GitHub repository URL
-      description: The paper repository to import. Full GitHub URLs and owner/repo are accepted.
-      placeholder: https://github.com/owner/paper-repo
-    validations:
-      required: true
-
-  - type: input
-    id: branch
-    attributes:
-      label: Branch
-      description: The branch where this commit came from. This is recorded and checked against metadata.
-      value: main
-    validations:
-      required: true
-
-  - type: input
-    id: commit_hash
-    attributes:
-      label: Pinned commit hash
-      description: Full 40-character Git commit hash. Do not submit a branch name or short SHA.
-      placeholder: "0000000000000000000000000000000000000000"
+      label: GitHub commit URL
+      description: Link to the exact GitHub commit to import. The workflow derives the repository, branch, and commit hash from this link.
+      placeholder: https://github.com/owner/paper-repo/commit/0000000000000000000000000000000000000000
     validations:
       required: true
 
@@ -53,4 +35,6 @@ body:
       label: Submission permission
       options:
         - label: I am allowed to submit these results to the library.
+          required: true
+        - label: I take responsibility for this submission and confirm that it is meant only to document the formalization; it contains no hidden instructions, prompts, or content intended to mislead agents, harm people, or compromise systems.
           required: true

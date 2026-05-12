@@ -31,11 +31,6 @@ rules.
   Paper repos that use mathlib should pin compatible Lean and mathlib versions
   through their Lake setup and committed manifest.
 
-- GitHub Pages overview:
-  https://docs.github.com/pages/getting-started-with-github-pages/what-is-github-pages
-  GitHub Pages is static hosting for HTML, CSS, and JavaScript from a GitHub
-  repository.
-
 - GitHub issue forms:
   https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/configuring-issue-templates-for-your-repository
   The import site uses a structured issue form so GitHub handles sign-in and

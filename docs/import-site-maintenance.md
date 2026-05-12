@@ -1,7 +1,7 @@
 # Import Site Maintenance
 
-These notes are for agents maintaining the standalone import website and the
-GitHub Action it triggers.
+These notes are for agents maintaining the GitHub Issue Form and the GitHub
+Action it triggers.
 
 ## Goal
 
@@ -10,8 +10,8 @@ users submit a paper formalization repo for import into the meta-library.
 
 The issue form triggers a GitHub Actions workflow through the `issues` event.
 The repository may also keep `workflow_dispatch` for manual maintainer runs.
-No public page should contain a personal access token, client secret, or any
-other private credential.
+No issue form or workflow input should contain a personal access token, client
+secret, or any other private credential.
 
 ## Required User Flow
 
@@ -35,12 +35,13 @@ workflow parser reads the issue body headings.
 
 The issue form must provide fields for:
 
-- source repository URL
-- source branch
-- full 40-character commit hash
+- GitHub commit URL for the exact submitted commit
 - metadata file path, default `metadata-meta-library.yaml`
 - confirmation that the submitter is allowed to submit the results to the
   library
+- confirmation that the submitter takes responsibility for the submitted
+  content and has not included hidden prompts, misleading agent instructions,
+  harmful content, or content intended to compromise systems
 
 The workflow reads the surface file path and optional usage feedback paths from
 metadata.
@@ -48,11 +49,16 @@ metadata.
 The workflow should validate before checking out submitted code:
 
 - source repository resolves to `owner/repo`
-- branch contains only safe branch/path characters
-- commit is a full 40-character hex SHA
+- branch resolved from GitHub contains only safe branch/path characters
+- commit URL contains a full 40-character hex SHA
 - metadata path contains only safe path characters
 - metadata-declared surface and optional paths contain only safe path
   characters
+- required issue-form checkboxes are checked
+- paper-facing files are short enough to review
+- submitted text does not contain SQL-like queries or common prompt-injection
+  phrases
+- Lean source does not invoke external processes or network/client APIs
 
 The workflow must comment clear errors for:
 
@@ -95,6 +101,8 @@ The workflow must include:
 - `on: issues`
 - optional `on: workflow_dispatch` for manual maintainer runs
 - issue parser outputs matching the form fields
+- commit URL parsing that derives `source_repository`, `source_branch`, and
+  `source_commit`
 - an authorization job that checks `github.actor`
 - an input validation step before checkout or import work
 - a submitted-repo checkout pinned to `source_commit`
@@ -114,9 +122,9 @@ Unauthorized users must fail immediately with a clear message.
 
 ## Security Rules
 
-Do not put secrets in GitHub Pages or issue templates.
+Do not put secrets in issue templates.
 
-Do not trust frontend validation.
+Do not trust issue-form validation.
 
 Do not trust workflow inputs as shell code.
 
@@ -125,11 +133,17 @@ The import must use the exact submitted commit hash.
 
 Validate at least:
 
+- commit URL matches `https://github.com/<owner>/<repo>/commit/<40-char-sha>`
 - `source_repository` matches `^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`
-- `source_branch` matches `^[A-Za-z0-9._/-]+$`
+- resolved `source_branch` matches `^[A-Za-z0-9._/-]+$`
 - `source_commit` matches `^[0-9a-fA-F]{40}$`
 - metadata and metadata-declared surface/feedback paths match
   `^[A-Za-z0-9._/-]+$`
+- paper-facing files stay below the configured size and line-count limits
+- submitted text is rejected when it contains common SQL query/mutation
+  patterns or common prompt-injection language
+- Lean files are rejected when they use external process hooks, network command
+  names, or network/client API markers
 
 The workflow should treat submitted repo contents as untrusted until the checker
 has passed.
@@ -143,5 +157,5 @@ These files remain in `clemenskuske/lean-meta-library`:
 - `allowed-axioms.lean`
 - `schemas/`
 
-This repository owns the import issue form, landing page, workflow, allowlist,
-paper preparation guide, and submission templates.
+This repository owns the import issue form, workflow, allowlist, paper
+preparation guide, and submission templates.

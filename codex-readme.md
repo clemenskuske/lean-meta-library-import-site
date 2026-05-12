@@ -42,10 +42,7 @@ Keep these things here:
 
 - `.github/ISSUE_TEMPLATE/import-paper.yml` for the structured GitHub
   authenticated import form;
-- `index.html` and `styles.css` for the GitHub Pages landing page that links to
-  the issue form;
 - `.github/workflows/ingest-paper.yml`, the workflow dispatch target;
-- `.github/workflows/pages.yml`, the static site deployment workflow;
 - `.github/import-allowed-users.txt`, one approved GitHub username per line;
 - `docs/`, especially paper-repo preparation and import-site maintenance;
 - `templates/`, the files a candidate paper repo should copy or imitate.
@@ -58,17 +55,18 @@ meta-library repo.
 
 The user submits through the GitHub Issue Form. GitHub requires sign-in before
 issue creation, so `github.actor` identifies the submitter. The workflow parses
-the submitted repository, branch, pinned commit, and metadata file from the
-issue body. Surface and optional reuse-feedback paths are read from metadata,
-then the workflow validates the pinned submission.
+the submitted GitHub commit URL and metadata file from the issue body, then
+derives the repository, commit hash, and source branch before validation.
+Surface and optional reuse-feedback paths are read from metadata, then the
+workflow validates the pinned submission.
 
-The static landing page and issue form must never contain a client secret,
-personal access token, or cross-repo push token.
+The issue form must never contain a client secret, personal access token, or
+cross-repo push token.
 
 Real authorization happens in GitHub Actions. The workflow checks
 `github.actor` against `.github/import-allowed-users.txt` before checking out
-submitted code. Treat frontend validation as usability only, not as a security
-boundary.
+submitted code. Treat issue-form validation as usability only, not as a
+security boundary.
 
 The workflow:
 
@@ -134,23 +132,11 @@ During ingestion, reuse feedback is merged into the targeted older version
 folders in the main meta-library as `usage-feedback.json` and
 `downstream-hard-earned-lessons.md`.
 
-## Static Site Maintenance
-
-The landing page is plain HTML and CSS. There is no local build step. The actual
-submission form is GitHub-rendered from `.github/ISSUE_TEMPLATE/import-paper.yml`.
-
-Useful local smoke check:
-
-```bash
-python3 -m http.server
-```
-
-Then open the served page and confirm it links to the import issue form.
-
 When editing `.github/scripts/prepare-submission.mjs`, preserve these guardrails:
 
-- accept GitHub repo URLs but normalize to `owner/repo`;
-- require a full 40-character commit hash before dispatch;
+- accept GitHub commit URLs and normalize them to `owner/repo` plus commit SHA;
+- require a full 40-character commit hash in the commit URL before dispatch;
+- resolve a source branch from GitHub branch data for the submitted commit;
 - reject unsafe paths, absolute paths, empty path parts, `.`, and `..`;
 - keep optional usage-feedback paths empty unless the UI grows controls for
   them;

@@ -18,6 +18,11 @@ Checklist:
 - commit `lean-toolchain`, `lakefile.lean`, `lake-manifest.json`, and sources
 - do not commit `.lake/`
 
+The submitted GitHub repository must remain fetchable by Lake at the pinned
+commit after import. The meta-library stores the accepted surface and metadata,
+then adds a Lake git dependency back to that exact source commit so the aliases
+continue to elaborate.
+
 Lean can check an individual file directly with `lean File.lean`, but submitted
 paper repos must still build as Lake packages because the meta-library imports
 packages and depends on reproducible package metadata.
@@ -48,6 +53,7 @@ Do not use:
 - unapproved `constant`
 - new proof scripts
 - broad internal imports when one root import is available
+- external processes, network clients, or shell/network commands
 
 ## 3. Create Metadata
 
@@ -65,6 +71,9 @@ Every exported item should connect:
 
 The metadata may cover multiple papers in one repo, but each paper submitted to
 the meta-library needs its own metadata entry and eventual version folder.
+Keep paper-facing files concise enough for review. Metadata, notes, theorem
+lists, and the surface file should not be used to store large generated text,
+SQL queries, hidden prompts, or instructions aimed at downstream agents.
 
 Versions use the shape `v<generation><approach><update>`, for example `v1a1`.
 The leading number identifies the paper-version generation, the letter
@@ -91,14 +100,13 @@ and updates lookup scores in `papers.csv`.
 
 Never submit `latest main` implicitly. Submit:
 
-- repo URL
-- branch
-- exact commit hash
-- metadata file path
-- surface file path
-- reuse feedback file paths, if present
+- exact GitHub commit URL
+- metadata file path, which declares the surface file and any reuse feedback
+  file paths
 
-The pinned commit is the reproducible source of the accepted paper version.
+The workflow derives the repository, full commit hash, and branch data from the
+commit URL. The pinned commit is the reproducible source of the accepted paper
+version.
 
 ## 6. What CI Checks
 
@@ -106,7 +114,10 @@ CI and the checker container validate:
 
 - required files
 - metadata fields
-- pinned branch and commit
+- pinned commit and resolved branch
+- paper-facing file size and line-count limits
+- SQL-like text, common prompt-injection phrases, and Lean network/process
+  hooks
 - `lake build`
 - surface file resolution
 - `sorry` and `admit`

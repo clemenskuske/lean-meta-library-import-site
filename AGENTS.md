@@ -1,7 +1,7 @@
 # Agent Readme
 
-This file is for agents creating or consuming paper repositories for the
-structural graph theory meta-library.
+This file is for agents creating paper repositories for the structural graph
+theory meta-library import workflow.
 
 This import-site repository is the home for paper-repository preparation
 instructions, submission templates, and the import workflow. The Lean
@@ -100,20 +100,7 @@ identifies a formalization approach, and the trailing number identifies updates
 within that same approach. For example, `v1a2` updates approach `a`, while
 `v1b1` is a different approach to the same generation.
 
-## Consuming The Meta-Library
-
-1. Open `papers.csv` and find candidate papers.
-2. Prefer rows where `is_current` is `true` and `quality_status` is
-   `accepted` or `reviewed`. There may be several current versions for the same
-   paper.
-3. Open the version's `surface-readme.md`.
-4. Open `theorem-list.json` for exact Lean names and paper locations.
-5. Import the surface file in Lean.
-6. If the formalization helps or fails to help, record that in the new paper
-   repo's `used-formalizations.json`. Put longer practical notes in
-   `used-formalization-lessons.md`.
-
-## Feedback And Quality Metadata
+## Submission Feedback Files
 
 There are two different note streams.
 
@@ -122,9 +109,6 @@ written by the agent that created this paper's Lean code and explains design
 decisions, failed approaches, and useful proof tricks inside this formalization.
 
 `used-formalizations.json` and `used-formalization-lessons.md` belong to a new
-paper repo that consumed older formalizations. During import, those files are
-merged into the targeted older version folders as `usage-feedback.json` and
-`downstream-hard-earned-lessons.md`. The same import step updates aggregate
-fields in `papers.csv` and `quality-metadata.json`.
-
-Agents do not edit quality metadata in existing meta-library folders directly.
+paper repo that tried to use older meta-library versions. They are submission
+inputs; the import workflow decides how to merge them into accepted
+meta-library state.

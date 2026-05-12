@@ -5,14 +5,8 @@ on:
     types: [opened, edited, reopened]
   workflow_dispatch:
     inputs:
-      source_repository:
-        description: "GitHub repository in owner/name form"
-        required: true
-      source_branch:
-        description: "Submitted branch name"
-        required: true
-      source_commit:
-        description: "Pinned 40-character commit hash"
+      source_commit_url:
+        description: "GitHub commit URL for the exact submitted commit"
         required: true
       metadata_path:
         description: "Path to metadata-meta-library.yaml in the paper repo"
@@ -38,20 +32,53 @@ jobs:
       metadata_path: ${{ steps.submission.outputs.metadata_path }}
     steps:
       - name: Checkout import controller
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Check GitHub username allowlist
+        id: allowlist
+        shell: bash
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          if grep -Fxiq "$ACTOR" .github/import-allowed-users.txt; then
+            echo "Authorized import user: $ACTOR"
+          else
+            echo "User '$ACTOR' is not allowed to run this import workflow."
+            exit 1
+          fi
+
+      - name: Comment on unauthorized issue submission
+        if: failure() && github.event_name == 'issues' && steps.allowlist.outcome == 'failure'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Import submission was not accepted.",
+                "",
+                `Reason: \`${context.actor}\` is not on the import allowlist.`,
+                "",
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join("\n")
+            });
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
 
       - name: Parse and validate submission fields
         id: submission
+        env:
+          GITHUB_TOKEN: ${{ secrets.SUBMISSION_READ_TOKEN || secrets.META_LIBRARY_PUSH_TOKEN || github.token }}
         run: node .github/scripts/prepare-submission.mjs
 
       - name: Comment on invalid issue submission
         if: failure() && github.event_name == 'issues' && steps.submission.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require("fs");
@@ -71,37 +98,6 @@ jobs:
               ].join("\n")
             });
 
-      - name: Check GitHub username allowlist
-        id: allowlist
-        shell: bash
-        env:
-          ACTOR: ${{ github.actor }}
-        run: |
-          if grep -Fxiq "$ACTOR" .github/import-allowed-users.txt; then
-            echo "Authorized import user: $ACTOR"
-          else
-            echo "User '$ACTOR' is not allowed to run this import workflow."
-            exit 1
-          fi
-
-      - name: Comment on unauthorized issue submission
-        if: failure() && github.event_name == 'issues' && steps.allowlist.outcome == 'failure'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: [
-                "Import submission was not accepted.",
-                "",
-                `Reason: \`${context.actor}\` is not on the import allowlist.`,
-                "",
-                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-              ].join("\n")
-            });
-
       - name: Confirm target repository token
         id: target_token
         shell: bash
@@ -115,7 +111,7 @@ jobs:
 
       - name: Comment on import-site configuration failure
         if: failure() && github.event_name == 'issues' && steps.target_token.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.createComment({
@@ -133,7 +129,7 @@ jobs:
 
       - name: Comment on accepted issue submission
         if: success() && github.event_name == 'issues'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.createComment({
@@ -144,6 +140,7 @@ jobs:
                 "Import submission accepted for validation.",
                 "",
                 `Repository: \`${{ steps.submission.outputs.source_repository }}\``,
+                `Branch: \`${{ steps.submission.outputs.source_branch }}\``,
                 `Commit: \`${{ steps.submission.outputs.source_commit }}\``,
                 "",
                 `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
@@ -155,12 +152,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout import controller
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: import-controller
 
       - name: Checkout meta-library
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ env.META_LIBRARY_REPOSITORY }}
           ref: ${{ env.META_LIBRARY_REF }}
@@ -168,7 +165,7 @@ jobs:
           token: ${{ secrets.META_LIBRARY_PUSH_TOKEN }}
 
       - name: Checkout submitted paper at pinned commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ needs.prepare.outputs.source_repository }}
           ref: ${{ needs.prepare.outputs.source_commit }}
@@ -177,7 +174,7 @@ jobs:
           token: ${{ secrets.SUBMISSION_READ_TOKEN || secrets.META_LIBRARY_PUSH_TOKEN || github.token }}
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
 
@@ -198,6 +195,7 @@ jobs:
       - name: Validate metadata and surface declaration
         id: metadata
         env:
+          SOURCE_REPOSITORY: ${{ needs.prepare.outputs.source_repository }}
           SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
           SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
           METADATA_PATH: ${{ needs.prepare.outputs.metadata_path }}
@@ -343,7 +341,7 @@ jobs:
 
       - name: Comment on passed issue submission
         if: success() && github.event_name == 'issues'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.createComment({
@@ -363,7 +361,7 @@ jobs:
 
       - name: Close successful issue submission
         if: success() && github.event_name == 'issues'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.update({
@@ -376,7 +374,7 @@ jobs:
 
       - name: Comment on failed issue validation
         if: failure() && github.event_name == 'issues'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.createComment({

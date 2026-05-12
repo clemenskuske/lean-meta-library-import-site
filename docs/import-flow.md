@@ -46,7 +46,7 @@ Required information:
 - exported definitions and theorems
 - relation between Lean statements and paper statements
 - surface-level usage notes
-- website-facing paper-to-surface connection data
+- catalog-facing paper-to-surface connection data
 
 Optional information:
 
@@ -59,14 +59,14 @@ Optional information:
 
 ## 4. Submission Happens
 
-The user submits the paper repo URL, branch, full commit hash, and metadata
-path. The surface file and optional reuse-feedback files are read from metadata.
-The system must never import latest `main` implicitly.
+The user submits the exact GitHub commit URL and metadata path. The workflow
+derives the paper repo, full commit hash, and source branch from that URL and
+GitHub branch data. The surface file and optional reuse-feedback files are read
+from metadata. The system must never import latest `main` implicitly.
 
 The submission form is hosted as a GitHub Issue Form in this import-site
 repository. Opening an issue requires a signed-in GitHub user, and the workflow
-runs from the `issues` event. The landing page only links to the issue form and
-does not contain tokens or OAuth code.
+runs from the `issues` event. There is no separate landing page or OAuth code.
 
 The real authorization still happens in the workflow. The workflow checks
 `github.actor` against `.github/import-allowed-users.txt` before checking out or
@@ -74,16 +74,21 @@ importing submitted code.
 
 ## 5. CI Checks The Paper Repo
 
-The checker should produce short structured errors that the frontend can
-display.
+The checker should produce short structured errors that the workflow can report
+back on the issue.
 
 It checks:
 
 - GitHub username allowlist
 - dispatch input shape
+- required responsibility and safety confirmations from the issue form
 - required files
 - metadata fields
-- full commit hash
+- full commit hash from the commit URL
+- resolved source branch
+- short paper-facing files
+- SQL-like text, common prompt-injection phrases, and Lean network/process
+  hooks
 - `lake build`
 - surface file resolution
 - `sorry` and `admit`
@@ -113,7 +118,14 @@ MetaLibrary/Papers/<paper-id>/paper-meta.json
 MetaLibrary/Papers/<paper-id>.lean
 MetaLibrary/Papers.lean
 papers.csv
+lakefile.lean
+lake-manifest.json
 ```
+
+The importer adds a Lake git dependency from the meta-library to the submitted
+paper repository at the exact accepted commit. The accepted surface can
+therefore keep importing the submitted paper package while the meta-library only
+stores the stable surface and catalog metadata.
 
 ## 7. Meta-Library Is Rebuilt
 
