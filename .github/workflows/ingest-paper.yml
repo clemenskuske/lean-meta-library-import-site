@@ -264,6 +264,7 @@ jobs:
         uses: leanprover/lean-action@v1
         with:
           auto-config: false
+          lake-package-directory: meta-library
 
       - name: Update Lake manifest
         working-directory: meta-library
